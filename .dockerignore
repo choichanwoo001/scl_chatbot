@@ -10,5 +10,10 @@ frontend/dist
 data/attachments
 data/ocr
 data/.field-encryption.key
+data/scl_catalog.db
+data/scl_catalog.db-*
+data/scl_catalog.db.tmp
+data/scl_catalog.snapshot.db
+data/scl_catalog.snapshot.db-*
 tmp
 *.log

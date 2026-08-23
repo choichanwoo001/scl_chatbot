@@ -1,20 +1,41 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from gzip import open as gzip_open
+from pathlib import Path
+from shutil import copyfileobj
 
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from .config import settings
+from .config import DEFAULT_DATABASE_URL, ROOT, settings
 
 
 class Base(DeclarativeBase):
     pass
 
 
+def _bootstrap_default_database(database_url: str) -> None:
+    """Create a writable runtime DB from the versioned public-data snapshot."""
+
+    if database_url != DEFAULT_DATABASE_URL:
+        return
+
+    runtime_path = ROOT / "data" / "scl_catalog.db"
+    snapshot_path = ROOT / "data" / "scl_catalog.snapshot.db.gz"
+    if runtime_path.exists() or not snapshot_path.exists():
+        return
+
+    temporary_path = Path(f"{runtime_path}.tmp")
+    with gzip_open(snapshot_path, "rb") as source, temporary_path.open("wb") as destination:
+        copyfileobj(source, destination, length=1024 * 1024)
+    temporary_path.replace(runtime_path)
+
+
 def create_database_engine(database_url: str | None = None) -> Engine:
     url = database_url or settings.database_url
+    _bootstrap_default_database(url)
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     pool_options = {"poolclass": StaticPool} if url == "sqlite:///:memory:" else {}
     engine = create_engine(

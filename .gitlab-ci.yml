@@ -10,6 +10,16 @@ backend-test:
   script:
     - PYTHONPATH=backend pytest -q backend/tests
 
+data-snapshot-test:
+  stage: test
+  image: python:3.13-slim
+  variables:
+    SEED_DEMO_ON_EMPTY: "false"
+  before_script:
+    - pip install --no-cache-dir -r backend/requirements.txt
+  script:
+    - PYTHONPATH=backend python scripts/validate_public_data.py
+
 frontend-test:
   stage: test
   image: node:22-alpine
