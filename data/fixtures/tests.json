@@ -1,0 +1,72 @@
+[
+  {
+    "code": "DEMO-C5621",
+    "name": "HPV DNA Genotyping",
+    "aliases": ["HPV", "인유두종바이러스", "HPV 유전자형"],
+    "specimen": "자궁경부 도말 검체",
+    "container": "전용 수송용기",
+    "method": "Real-time PCR",
+    "schedule": "월–토 (데모)",
+    "tat": "검사 후 2–3일 (데모)",
+    "source_title": "SCL 검사항목 조회 시연 데이터",
+    "source_url": "https://www.scllab.co.kr/front/main.do",
+    "updated_at": "2026-08-15",
+    "demo": true
+  },
+  {
+    "code": "DEMO-D3230",
+    "name": "TSH",
+    "aliases": ["갑상선자극호르몬", "갑상선 기능", "thyroid stimulating hormone"],
+    "specimen": "혈청",
+    "container": "SST tube",
+    "method": "ECLIA",
+    "schedule": "월–토 (데모)",
+    "tat": "검사 후 1일 (데모)",
+    "source_title": "SCL 검사항목 조회 시연 데이터",
+    "source_url": "https://www.scllab.co.kr/front/main.do",
+    "updated_at": "2026-08-15",
+    "demo": true
+  },
+  {
+    "code": "DEMO-D3240",
+    "name": "Free T4",
+    "aliases": ["유리 티록신", "FT4", "갑상선 기능"],
+    "specimen": "혈청",
+    "container": "SST tube",
+    "method": "ECLIA",
+    "schedule": "월–토 (데모)",
+    "tat": "검사 후 1일 (데모)",
+    "source_title": "SCL 검사항목 조회 시연 데이터",
+    "source_url": "https://www.scllab.co.kr/front/main.do",
+    "updated_at": "2026-08-15",
+    "demo": true
+  },
+  {
+    "code": "DEMO-B1010",
+    "name": "CBC 8종",
+    "aliases": ["전혈구검사", "CBC", "일반혈액검사"],
+    "specimen": "전혈",
+    "container": "EDTA tube",
+    "method": "Automated count",
+    "schedule": "월–토 (데모)",
+    "tat": "검사 후 1일 (데모)",
+    "source_title": "SCL 검사항목 조회 시연 데이터",
+    "source_url": "https://www.scllab.co.kr/front/main.do",
+    "updated_at": "2026-08-15",
+    "demo": true
+  },
+  {
+    "code": "DEMO-U2001",
+    "name": "Urine Drug Screening Panel",
+    "aliases": ["소변 마약 검사", "약물 선별검사", "drug screen"],
+    "specimen": "소변",
+    "container": "멸균 소변용기",
+    "method": "Immunoassay",
+    "schedule": "평일 (데모)",
+    "tat": "검사 후 1–2일 (데모)",
+    "source_title": "SCL 검사항목 조회 시연 데이터",
+    "source_url": "https://www.scllab.co.kr/front/main.do",
+    "updated_at": "2026-08-15",
+    "demo": true
+  }
+]

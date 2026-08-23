@@ -1,0 +1,405 @@
+from __future__ import annotations
+
+import json
+import threading
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import joinedload
+
+from .config import settings
+from .database import SessionLocal, init_database
+from .models import (
+    DataSource,
+    IngestionRun,
+    Method,
+    Specimen,
+    Test,
+    TestAlias,
+    TestVariant,
+    utcnow,
+)
+from .normalization import normalize_search_text, parse_schedule, parse_turnaround_days
+from .schemas import TestInfo
+
+ROOT = Path(__file__).resolve().parents[2]
+FIXTURE_PATH = ROOT / "data" / "fixtures" / "tests.json"
+SEARCH_STOP_WORDS = {
+    "검사",
+    "검체",
+    "용기",
+    "결과",
+    "관련",
+    "알려줘",
+    "뭐야",
+    "찾아줘",
+    "소요일",
+    "정보",
+}
+SPECIMEN_GROUP_TERMS = {
+    "urine": "urine 소변 요",
+    "serum": "serum 혈청",
+    "plasma": "plasma 혈장",
+    "whole_blood": "whole blood 전혈 혈액",
+    "stool": "stool 분변 대변",
+    "tissue": "tissue 조직",
+    "swab": "swab 도말",
+    "csf": "csf 뇌척수액",
+    "body_fluid": "body fluid 체액",
+}
+
+
+@dataclass(frozen=True)
+class _CatalogSearchRow:
+    info: TestInfo
+    name: str
+    aliases: tuple[str, ...]
+    specimen: str
+    specimen_terms: str
+    method: str
+    billing: str
+    schedule: str
+    tat: str
+    code: str
+    haystack: str
+
+
+class DatabaseCatalog:
+    def __init__(self) -> None:
+        self._search_cache_lock = threading.Lock()
+        self._search_cache_signature: tuple[str, int, int, datetime | None] | None = None
+        self._search_cache: tuple[_CatalogSearchRow, ...] = ()
+        init_database()
+        if settings.seed_demo_on_empty:
+            self._seed_demo_if_empty()
+
+    def get(self, code: str | None, variant_key: str | None = None) -> TestInfo | None:
+        if not code and not variant_key:
+            return None
+        with SessionLocal() as session:
+            statement = self._base_statement()
+            if variant_key:
+                statement = statement.where(TestVariant.source_row_key == variant_key)
+                if code:
+                    statement = statement.where(func.lower(Test.source_test_code) == code.casefold())
+            else:
+                statement = statement.where(func.lower(Test.source_test_code) == code.casefold())
+            variants = list(session.scalars(statement.order_by(TestVariant.id).limit(2)).unique())
+            if not variants:
+                return None
+            if not variant_key and len(variants) > 1:
+                return None
+            return self._to_info(variants[0])
+
+    def search(self, query: str, limit: int = 10) -> list[TestInfo]:
+        normalized_query = normalize_search_text(query)
+        terms = [term for term in normalized_query.split() if len(term) > 1 and term not in SEARCH_STOP_WORDS]
+        if not normalized_query:
+            return []
+
+        rows = self._search_rows()
+
+        ranked: list[tuple[int, str, TestInfo]] = []
+        for row in rows:
+            aliases = row.aliases
+            name = row.name
+            specimen = row.specimen
+            specimen_terms = row.specimen_terms
+            method = row.method
+            billing = row.billing
+            schedule = row.schedule
+            tat = row.tat
+            code = row.code
+            haystack = row.haystack
+
+            score = 0
+            if normalized_query == code:
+                score += 200
+            elif code in normalized_query:
+                score += 80
+            if normalized_query == name or normalized_query in aliases:
+                score += 150
+            matched_terms = sum(1 for term in terms if term in haystack)
+            score += matched_terms * 30
+            if terms and matched_terms == len(terms):
+                score += 100
+            for term in terms:
+                if term in name:
+                    score += 15
+                if any(term in alias for alias in aliases):
+                    score += 12
+                if term in specimen:
+                    score += 7
+                if term in specimen_terms:
+                    score += 7
+                if term in method:
+                    score += 5
+                if term in billing:
+                    score += 4
+                if term in tat:
+                    score += 6
+                if term in schedule:
+                    score += 3
+                if term in haystack and score == 0:
+                    score += 1
+            if score:
+                ranked.append((score, name, row.info))
+
+        ranked.sort(key=lambda item: (-item[0], item[1], item[2].variant_key or item[2].code))
+        return [info for _, _, info in ranked[:limit]]
+
+    def _search_rows(self) -> tuple[_CatalogSearchRow, ...]:
+        with SessionLocal() as session:
+            source_key = self._preferred_source_key(session)
+            count, max_id, latest_seen = session.execute(
+                select(
+                    func.count(TestVariant.id),
+                    func.max(TestVariant.id),
+                    func.max(TestVariant.last_seen_at),
+                )
+                .join(TestVariant.test)
+                .join(Test.data_source)
+                .where(
+                    DataSource.key == source_key,
+                    Test.status == "active",
+                    TestVariant.status == "active",
+                )
+            ).one()
+            signature = (source_key, int(count or 0), int(max_id or 0), latest_seen)
+            if signature == self._search_cache_signature:
+                return self._search_cache
+
+            with self._search_cache_lock:
+                if signature == self._search_cache_signature:
+                    return self._search_cache
+                statement = self._base_statement().where(
+                    DataSource.key == source_key,
+                    Test.status == "active",
+                    TestVariant.status == "active",
+                )
+                variants = list(session.scalars(statement).unique())
+                rows: list[_CatalogSearchRow] = []
+                for variant in variants:
+                    test = variant.test
+                    aliases = tuple(normalize_search_text(item.alias) for item in test.aliases)
+                    name = normalize_search_text(variant.display_name)
+                    specimen = normalize_search_text(
+                        variant.specimen.canonical_name if variant.specimen else ""
+                    )
+                    specimen_terms = normalize_search_text(
+                        SPECIMEN_GROUP_TERMS.get(
+                            variant.specimen.specimen_group if variant.specimen else "",
+                            "",
+                        )
+                    )
+                    method = normalize_search_text(variant.method.name if variant.method else "")
+                    billing = normalize_search_text(variant.billing_code_text)
+                    schedule = normalize_search_text(variant.schedule_text)
+                    tat = normalize_search_text(variant.tat_text)
+                    code = test.source_test_code.casefold()
+                    rows.append(
+                        _CatalogSearchRow(
+                            info=self._to_info(variant),
+                            name=name,
+                            aliases=aliases,
+                            specimen=specimen,
+                            specimen_terms=specimen_terms,
+                            method=method,
+                            billing=billing,
+                            schedule=schedule,
+                            tat=tat,
+                            code=code,
+                            haystack=" ".join(
+                                [
+                                    name,
+                                    *aliases,
+                                    specimen,
+                                    specimen_terms,
+                                    method,
+                                    billing,
+                                    schedule,
+                                    tat,
+                                    code,
+                                ]
+                            ),
+                        )
+                    )
+                self._search_cache = tuple(rows)
+                self._search_cache_signature = signature
+                return self._search_cache
+
+    def prompt_snapshot(self, items: list[TestInfo] | None = None) -> str:
+        selected = items if items is not None else []
+        return json.dumps(
+            [item.model_dump(mode="json") for item in selected[:10]],
+            ensure_ascii=False,
+        )
+
+    def status(self) -> dict[str, object]:
+        with SessionLocal() as session:
+            source_key = self._preferred_source_key(session)
+            test_count = (
+                session.scalar(
+                    select(func.count(Test.id))
+                    .join(DataSource)
+                    .where(DataSource.key == source_key, Test.status == "active")
+                )
+                or 0
+            )
+            variant_count = (
+                session.scalar(
+                    select(func.count(TestVariant.id))
+                    .join(Test)
+                    .join(DataSource)
+                    .where(DataSource.key == source_key, TestVariant.status == "active")
+                )
+                or 0
+            )
+            last_run = session.scalar(
+                select(IngestionRun)
+                .join(DataSource, IngestionRun.data_source_id == DataSource.id)
+                .where(DataSource.key == source_key)
+                .order_by(IngestionRun.started_at.desc())
+                .limit(1)
+            )
+            return {
+                "source": source_key,
+                "tests": test_count,
+                "variants": variant_count,
+                "last_sync_at": (
+                    last_run.finished_at.isoformat() if last_run and last_run.finished_at else None
+                ),
+                "last_sync_status": last_run.status if last_run else None,
+            }
+
+    @staticmethod
+    def _base_statement():
+        return (
+            select(TestVariant)
+            .join(TestVariant.test)
+            .join(Test.data_source)
+            .options(
+                joinedload(TestVariant.test).joinedload(Test.data_source),
+                joinedload(TestVariant.method),
+                joinedload(TestVariant.specimen),
+                joinedload(TestVariant.test).selectinload(Test.aliases),
+            )
+        )
+
+    @staticmethod
+    def _preferred_source_key(session) -> str:  # type: ignore[no-untyped-def]
+        public_count = session.scalar(
+            select(func.count(Test.id))
+            .join(DataSource)
+            .where(DataSource.key == "SCL_PUBLIC", Test.status == "active")
+        )
+        return "SCL_PUBLIC" if public_count else "DEMO"
+
+    @staticmethod
+    def _to_info(variant: TestVariant) -> TestInfo:
+        test = variant.test
+        source = test.data_source
+        updated = variant.last_seen_at.date().isoformat()
+        is_demo = source.key == "DEMO"
+        specimen = variant.specimen.canonical_name if variant.specimen else "정보 없음"
+        method = variant.method.name if variant.method else "정보 없음"
+        return TestInfo(
+            code=test.source_test_code,
+            variant_key=variant.source_row_key,
+            name=variant.display_name,
+            aliases=[item.alias for item in test.aliases],
+            specimen=specimen,
+            container=variant.container_text,
+            method=method,
+            schedule=variant.schedule_text or "정보 없음",
+            tat=variant.tat_text or "정보 없음",
+            source_title="SCL 검사항목조회" if not is_demo else "SCL 검사항목 조회 시연 데이터",
+            source_url=variant.detail_url,
+            updated_at=updated,
+            demo=is_demo,
+        )
+
+    def _seed_demo_if_empty(self) -> None:
+        with SessionLocal.begin() as session:
+            if session.scalar(select(func.count(Test.id))):
+                return
+            source = DataSource(
+                key="DEMO",
+                name="SCL 검사 시연 데이터",
+                base_url="https://www.scllab.co.kr",
+                source_type="fixture",
+            )
+            session.add(source)
+            session.flush()
+
+            method_cache: dict[str, Method] = {}
+            specimen_cache: dict[str, Specimen] = {}
+            raw = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+            now = utcnow()
+            for item in raw:
+                method_key = normalize_search_text(item["method"])
+                method = method_cache.get(method_key)
+                if method is None:
+                    method = Method(name=item["method"], normalized_name=method_key)
+                    session.add(method)
+                    session.flush()
+                    method_cache[method_key] = method
+
+                specimen_key = normalize_search_text(item["specimen"])
+                specimen = specimen_cache.get(specimen_key)
+                if specimen is None:
+                    specimen = Specimen(
+                        canonical_name=item["specimen"],
+                        normalized_name=specimen_key,
+                    )
+                    session.add(specimen)
+                    session.flush()
+                    specimen_cache[specimen_key] = specimen
+
+                test = Test(
+                    data_source_id=source.id,
+                    source_test_code=item["code"],
+                    name=item["name"],
+                    normalized_name=normalize_search_text(item["name"]),
+                    first_seen_at=now,
+                    last_seen_at=now,
+                )
+                session.add(test)
+                session.flush()
+                for alias in item.get("aliases", []):
+                    session.add(
+                        TestAlias(
+                            test_id=test.id,
+                            alias=alias,
+                            normalized_alias=normalize_search_text(alias),
+                            alias_type="fixture",
+                            source="fixture",
+                        )
+                    )
+                tat_min, tat_max = parse_turnaround_days(item["tat"])
+                days, shift = parse_schedule(item["schedule"])
+                session.add(
+                    TestVariant(
+                        test_id=test.id,
+                        source_sample_code="DEMO",
+                        source_row_key=f"{item['code']}:DEMO",
+                        display_name=item["name"],
+                        method_id=method.id,
+                        specimen_id=specimen.id,
+                        container_text=item.get("container"),
+                        schedule_text=item["schedule"],
+                        schedule_days=days,
+                        schedule_shift=shift,
+                        tat_text=item["tat"],
+                        tat_min_days=tat_min,
+                        tat_max_days=tat_max,
+                        detail_url=item["source_url"],
+                        first_seen_at=now,
+                        last_seen_at=now,
+                    )
+                )
+
+
+catalog = DatabaseCatalog()

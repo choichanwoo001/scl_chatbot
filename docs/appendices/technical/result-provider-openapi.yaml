@@ -1,0 +1,243 @@
+openapi: 3.1.0
+info:
+  title: SCL Chat Personal Result Gateway Contract
+  version: 1.0.0
+  description: >-
+    챗봇 백엔드와 기관 내부 검사결과 시스템 사이에 둘 Gateway 계약이다.
+    공개 SCL 홈페이지의 공식 API라고 주장하지 않으며, 기관 승인 후 내부 시스템을
+    이 계약으로 어댑트한다. 사용자 인증정보와 결과 데이터는 OpenAI로 전달하지 않는다.
+servers:
+  - url: https://results-gateway.example.internal
+paths:
+  /v1/auth/sessions:
+    post:
+      summary: 결과조회 임시 세션 발급
+      operationId: authenticateResultSession
+      security:
+        - gatewayClientId: []
+          gatewayClientSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: 인증 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /v1/results:
+    get:
+      summary: 인증 사용자의 신청 검사결과 목록
+      operationId: listResults
+      security:
+        - bearerAuth: []
+          gatewayClientId: []
+          gatewayClientSecret: []
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+            maxLength: 500
+      responses:
+        '200':
+          description: 결과 목록
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/results/{result_id}:
+    get:
+      summary: 검사결과 상세
+      operationId: getResult
+      security:
+        - bearerAuth: []
+          gatewayClientId: []
+          gatewayClientSecret: []
+      parameters:
+        - name: result_id
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      responses:
+        '200':
+          description: 검사결과 상세
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 결과 없음
+  /v1/auth/logout:
+    post:
+      summary: 결과조회 임시 세션 폐기
+      operationId: logoutResultSession
+      security:
+        - bearerAuth: []
+          gatewayClientId: []
+          gatewayClientSecret: []
+      responses:
+        '204':
+          description: 폐기 완료
+components:
+  securitySchemes:
+    gatewayClientId:
+      type: apiKey
+      in: header
+      name: X-Client-Id
+    gatewayClientSecret:
+      type: apiKey
+      in: header
+      name: X-Client-Secret
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  responses:
+    Unauthorized:
+      description: 인증 실패 또는 만료
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: 요청 제한
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    AuthRequest:
+      type: object
+      additionalProperties: false
+      required: [user_id, password, identity_value]
+      properties:
+        user_id:
+          type: string
+          minLength: 1
+          maxLength: 120
+        password:
+          type: string
+          minLength: 1
+          maxLength: 200
+          format: password
+          writeOnly: true
+        identity_value:
+          type: string
+          minLength: 4
+          maxLength: 100
+          writeOnly: true
+    AuthResponse:
+      type: object
+      additionalProperties: false
+      required: [access_token, expires_in]
+      properties:
+        access_token:
+          type: string
+          minLength: 1
+          writeOnly: true
+        expires_in:
+          type: integer
+          minimum: 1
+          maximum: 3600
+    ResultListResponse:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/ResultListItem'
+        next_cursor:
+          type: [string, 'null']
+    ResultListItem:
+      type: object
+      additionalProperties: false
+      required: [result_id, test_name, requested_at, status]
+      properties:
+        result_id:
+          type: string
+          maxLength: 200
+        test_name:
+          type: string
+          maxLength: 500
+        requested_at:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [received, processing, reported, corrected, cancelled]
+    ResultDetail:
+      type: object
+      additionalProperties: false
+      required: [result_id, test_name, requested_at, reported_at, status, fields, notice]
+      properties:
+        result_id:
+          type: string
+          maxLength: 200
+        test_name:
+          type: string
+          maxLength: 500
+        requested_at:
+          type: string
+          format: date
+        reported_at:
+          type: [string, 'null']
+          format: date
+        status:
+          type: string
+          enum: [received, processing, reported, corrected, cancelled]
+        fields:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/ResultField'
+        notice:
+          type: string
+          maxLength: 1000
+    ResultField:
+      type: object
+      additionalProperties: false
+      required: [name, value, reference]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        value:
+          type: string
+          maxLength: 2000
+        reference:
+          type: [string, 'null']
+          maxLength: 1000
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          maxLength: 80
+        message:
+          type: string
+          maxLength: 500

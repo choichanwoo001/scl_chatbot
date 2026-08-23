@@ -1,0 +1,14 @@
+.venv
+.env
+backend/.env
+frontend/.env*
+.git
+.pytest_cache
+**/__pycache__
+frontend/node_modules
+frontend/dist
+data/attachments
+data/ocr
+data/.field-encryption.key
+tmp
+*.log

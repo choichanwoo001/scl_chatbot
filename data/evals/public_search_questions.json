@@ -1,0 +1,19 @@
+[
+  {"query": "HPV 검사 용기 알려줘", "expected_type": "test", "title_any": ["HPV"], "top_k": 3},
+  {"query": "갑상선 관련 검사", "expected_type": "test", "title_any": ["TSH", "Free T"], "top_k": 5},
+  {"query": "알레르기 검사 종류", "expected_type": "test", "title_any": ["MAST", "IgE"], "top_k": 5},
+  {"query": "2026년 8월 연휴 검사일정 공문", "expected_type": "document", "title_any": ["2026년 8월", "검사일정"], "top_k": 3, "chat_status": "public_document", "chat_domain": "document"},
+  {"query": "LSD 신규 검사 공문", "expected_type": "document", "title_any": ["LSD"], "top_k": 5},
+  {"query": "검사의뢰서 다운로드", "expected_type": "attachment", "title_any": ["일반검사의뢰서"], "top_k": 3},
+  {"query": "5-HIAA 요보존제", "expected_type": "preservative", "title_any": ["5-HIAA"], "top_k": 3, "chat_status": "public_database", "chat_domain": "test"},
+  {"query": "대구의원 전화번호", "expected_type": "location", "title_any": ["대구의원"], "top_k": 3, "chat_status": "public_database", "chat_domain": "support"},
+  {"query": "제주의원 주소", "expected_type": "location", "title_any": ["제주의원"], "top_k": 3},
+  {"query": "대구 지점 주소", "expected_type": "location", "title_any": ["대구", "대구의원"], "top_k": 5},
+  {"query": "전국 네트워크 메뉴", "expected_type": "route", "title_any": ["전국 네트워크"], "top_k": 3, "chat_status": "public_database", "chat_domain": "support"},
+  {"query": "검체용기 페이지 어디야", "expected_type": "route", "title_any": ["검체용기"], "top_k": 3, "chat_status": "public_database", "chat_domain": "support"},
+  {"query": "사회공헌 소식", "expected_type": "document", "title_any": ["사회공헌", "의료봉사"], "top_k": 5, "chat_status": "public_document", "chat_domain": "corporate_content"},
+  {"query": "건강레시피 알려줘", "expected_type": "document", "title_any": ["건강레시피"], "top_k": 5, "chat_status": "public_document", "chat_domain": "corporate_content"},
+  {"query": "SCL 최신 뉴스", "expected_type": "document", "title_any": ["SCL"], "top_k": 5},
+  {"query": "HPV 자궁경부 질환 분류", "types": ["taxonomy"], "expected_type": "taxonomy", "title_any": ["HPV", "자궁경부"], "top_k": 3},
+  {"query": "갑상선 질환 분류", "types": ["taxonomy"], "expected_type": "taxonomy", "title_any": ["갑상선 질환"], "top_k": 3}
+]

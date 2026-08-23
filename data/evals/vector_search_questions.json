@@ -1,0 +1,16 @@
+[
+  {"query": "광복절 대체휴일 때문에 검사 결과가 늦어지나요?", "types": ["document"], "expected_refs": ["document:2"], "top_k": 5},
+  {"query": "8월 15일부터 17일까지 쉬는 동안 검사 일정", "types": ["document"], "expected_refs": ["document:2"], "top_k": 5},
+  {"query": "빨간날 접수한 검체 보고일 변경 안내", "types": ["document"], "expected_refs": ["document:2"], "top_k": 5},
+  {"query": "환각제 확진 검사를 새로 시작한다는 공문", "types": ["document"], "expected_refs": ["document:1"], "top_k": 5},
+  {"query": "lysergic acid diethylamide 확인 검사 안내", "types": ["document"], "expected_refs": ["document:1"], "top_k": 5},
+  {"query": "Mucopolysaccharidosis 선별이 자자체 검사로 바뀐 안내", "types": ["document"], "expected_refs": ["document:1"], "top_k": 5},
+  {"query": "일반 검사를 의뢰할 때 작성하는 PDF 양식", "types": ["attachment"], "expected_refs": ["attachment:933"], "top_k": 5},
+  {"query": "산부인과용 검사 신청 서식 파일", "types": ["attachment"], "expected_refs": ["attachment:934"], "top_k": 5},
+  {"query": "임신 중 태아 기형 선별검사 의뢰 양식", "types": ["attachment"], "expected_refs": ["attachment:935"], "top_k": 5},
+  {"query": "성매개감염 검사를 보내는 의뢰서", "types": ["attachment"], "expected_refs": ["attachment:938"], "top_k": 5},
+  {"query": "보건복지부가 인정한 SCL의 지역사회 ESG 활동", "types": ["document"], "expected_refs": ["document:1420"], "top_k": 5},
+  {"query": "사회공헌대상을 세 해 연속 받은 소식", "types": ["document"], "expected_refs": ["document:1446"], "top_k": 5},
+  {"query": "야외활동 뒤 진드기로 생기는 중증열성혈소판감소증후군", "types": ["document"], "expected_refs": ["document:1820"], "top_k": 5},
+  {"query": "아기에게 선천성 대사 이상이 있는지 확인하는 선별검사", "types": ["document"], "expected_refs": ["document:1836"], "top_k": 5}
+]
