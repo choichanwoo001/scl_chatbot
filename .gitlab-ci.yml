@@ -10,6 +10,16 @@ backend-test:
   script:
     - PYTHONPATH=backend pytest -q backend/tests
 
+ocr-test:
+  stage: test
+  image: python:3.13-slim
+  before_script:
+    - apt-get update
+    - apt-get install -y --no-install-recommends tesseract-ocr
+    - pip install --no-cache-dir -r backend/requirements.txt
+  script:
+    - PYTHONPATH=backend pytest -q backend/tests/test_ocr_engine.py
+
 data-snapshot-test:
   stage: test
   image: python:3.13-slim

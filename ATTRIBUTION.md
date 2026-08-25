@@ -20,4 +20,9 @@ Pretendard 폰트 파일은 프로젝트에 포함돼 있다. 제출·배포 전
 Python·Node 의존성의 라이선스는 각 패키지 메타데이터를 따른다. 운영 배포 전 SBOM과 license
 notice를 생성하고, 사용 정책과 충돌하는 의존성이 없는지 검토해야 한다.
 
+`data/ocr/tessdata/eng.traineddata`와 `kor.traineddata`는
+[Tesseract tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast)의 영어·한국어
+LSTM 언어 모델이다. Apache License 2.0을 따르며, 원문 라이선스는
+`data/ocr/LICENSE.tessdata_fast`에 포함한다. 이 저장소에서는 모델을 수정하지 않았다.
+
 이 문서는 출처를 기록하기 위한 것으로 법률 자문이나 사용 권한 승인을 대체하지 않는다.
