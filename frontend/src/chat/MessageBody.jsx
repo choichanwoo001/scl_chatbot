@@ -1,10 +1,65 @@
 import { ExternalLink } from "lucide-react";
 import { HandoffForm, ResultAuthForm } from "./ChatForms.jsx";
+import { parseStructuredText } from "./structuredText.js";
+
+function InlineText({ children }) {
+  return String(children).split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return <code key={`${part}-${index}`}>{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
+function StructuredText({ text, emphasizeFirst = false }) {
+  const blocks = parseStructuredText(text);
+  const hasStructure = blocks.length > 1 || blocks.some((block) => block.type !== "paragraph");
+
+  return (
+    <div className="structured-answer">
+      {blocks.map((block, index) => {
+        if (block.type === "heading") {
+          return <h3 className="answer-heading" key={`${block.type}-${index}`}><InlineText>{block.text}</InlineText></h3>;
+        }
+        if (block.type === "bullet-list" || block.type === "ordered-list") {
+          const List = block.type === "ordered-list" ? "ol" : "ul";
+          return <List className="answer-list" key={`${block.type}-${index}`}>
+            {block.items.map((item, itemIndex) => <li key={`${item}-${itemIndex}`}><InlineText>{item}</InlineText></li>)}
+          </List>;
+        }
+        if (block.type === "facts") {
+          return <dl className="answer-facts" key={`${block.type}-${index}`}>
+            {block.items.map((item, itemIndex) => <div key={`${item.label}-${item.value}-${itemIndex}`}>
+              <dt>{item.label}</dt><dd><InlineText>{item.value}</InlineText></dd>
+            </div>)}
+          </dl>;
+        }
+        if (block.type === "callout") {
+          return <aside className={`answer-callout ${block.label === "주의" || block.label === "중요" ? "is-warning" : ""}`} key={`${block.type}-${index}`}>
+            <strong>{block.label}</strong><p><InlineText>{block.text}</InlineText></p>
+          </aside>;
+        }
+
+        if (emphasizeFirst && index === 0 && hasStructure) {
+          return <div className="answer-summary" key={`${block.type}-${index}`}>
+            <span>답변 요약</span><p><InlineText>{block.text}</InlineText></p>
+          </div>;
+        }
+        return <p className="answer-paragraph" key={`${block.type}-${index}`}><InlineText>{block.text}</InlineText></p>;
+      })}
+    </div>
+  );
+}
 
 function TextReply({ message }) {
   return (
     <div>
-      <p>{message.text}</p>
+      {message.role === "assistant"
+        ? <StructuredText text={message.text} emphasizeFirst={message.liveGenerated && !message.error} />
+        : <p>{message.text}</p>}
       {message.citations?.length ? (
         <div className="citation-list">
           {message.citations.map((citation) => citation.url ? (
@@ -21,7 +76,7 @@ function TextReply({ message }) {
 function TestReply({ message }) {
   return (
     <div className="test-result-card">
-      <p>{message.text}</p>
+      <StructuredText text={message.text} />
       <div className="test-card-heading"><span>검사코드 {message.test.code}</span><strong>{message.test.name}</strong></div>
       <dl>
         <div><dt>검체/용기</dt><dd>{message.test.specimen}{message.test.container ? ` / ${message.test.container}` : ""}</dd></div>
@@ -38,7 +93,7 @@ function TestReply({ message }) {
 }
 
 function ResultListReply({ message, onResultSelect }) {
-  return <div><p>{message.text}</p><div className="result-list">{message.results.map((item) => (
+  return <div><StructuredText text={message.text} /><div className="result-list">{message.results.map((item) => (
     <button type="button" key={item.result_id} onClick={() => onResultSelect(item.result_id)}>
       <strong>{item.test_name}</strong><span>{item.requested_at} · {item.status}</span>
     </button>
@@ -56,9 +111,9 @@ function ResultDetailReply({ message }) {
 export function MessageBody({ message, onQuickQuestion, onAuthenticate, onHandoff, onResultSelect }) {
   switch (message.kind) {
     case "result_auth_form":
-      return <div><p>{message.text}</p><ResultAuthForm onAuthenticate={onAuthenticate} /></div>;
+      return <div><StructuredText text={message.text} /><ResultAuthForm onAuthenticate={onAuthenticate} /></div>;
     case "handoff_form":
-      return <div><p>{message.text}</p><HandoffForm onSubmit={onHandoff} /></div>;
+      return <div><StructuredText text={message.text} /><HandoffForm onSubmit={onHandoff} /></div>;
     case "result_list":
       return <ResultListReply message={message} onResultSelect={onResultSelect} />;
     case "result_detail":
@@ -66,7 +121,7 @@ export function MessageBody({ message, onQuickQuestion, onAuthenticate, onHandof
     case "test":
       return <TestReply message={message} />;
     case "choices":
-      return <div><p>{message.text}</p><div className="choice-list">
+      return <div><StructuredText text={message.text} /><div className="choice-list">
         {message.choices.map((choice) => <button type="button" key={choice} onClick={() => onQuickQuestion(choice)}>{choice}</button>)}
       </div></div>;
     default:

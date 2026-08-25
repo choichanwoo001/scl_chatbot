@@ -74,6 +74,44 @@ def test_search_prioritizes_notice_for_schedule_question() -> None:
     assert hits[0].entity_type == "document"
 
 
+def test_search_prioritizes_official_faq_for_matching_test_question() -> None:
+    _seed_public_search_rows()
+    with SessionLocal.begin() as session:
+        source = session.query(DataSource).filter_by(key="SEARCH_TEST").one()
+        session.add(
+            PublicDocument(
+                data_source_id=source.id,
+                source_external_key="official-faq-osteoporosis",
+                document_type="official_faq",
+                board_id="BBS_0014",
+                title="골다공증 관련 검사는 어떤 검사가 있나요?",
+                normalized_title=normalize_search_text("골다공증 관련 검사는 어떤 검사가 있나요?"),
+                body_text="골 형성 표지자와 골 흡수 표지자가 있습니다.",
+                source_url="https://www.scllab.co.kr/front/bbsList.do?bbsId=BBS_0014&pageIndex=1",
+                content_hash="d" * 64,
+            )
+        )
+        session.add(
+            PublicDocument(
+                data_source_id=source.id,
+                source_external_key="general-osteoporosis-document",
+                document_type="newsletter",
+                title="골다공증 검사 건강자료",
+                normalized_title=normalize_search_text("골다공증 검사 건강자료"),
+                body_text="일반적인 건강 정보입니다.",
+                source_url="https://example.com/general",
+                content_hash="e" * 64,
+            )
+        )
+
+    hits = public_search.search("골다공증 관련 검사는 어떤 검사 있나요?", ["document"], 3)
+
+    assert hits
+    assert hits[0].metadata["document_type"] == "official_faq"
+    assert "골 형성 표지자" in (hits[0].snippet or "")
+    assert all("장티푸스" not in hit.title for hit in hits)
+
+
 def test_search_can_filter_to_routes() -> None:
     _seed_public_search_rows()
     hits = public_search.search("검사의뢰서 페이지", types=["route"], limit=3)

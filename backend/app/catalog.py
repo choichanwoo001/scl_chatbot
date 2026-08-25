@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import func, select
@@ -18,6 +17,7 @@ from .models import (
     Specimen,
     Test,
     TestAlias,
+    TestPublicDetail,
     TestVariant,
     utcnow,
 )
@@ -37,6 +37,15 @@ SEARCH_STOP_WORDS = {
     "찾아줘",
     "소요일",
     "정보",
+    "주의사항",
+    "주의",
+    "방법",
+    "가능",
+    "가능한가요",
+    "전",
+    "전에",
+    "어떤",
+    "있나요",
 }
 SPECIMEN_GROUP_TERMS = {
     "urine": "urine 소변 요",
@@ -63,13 +72,15 @@ class _CatalogSearchRow:
     schedule: str
     tat: str
     code: str
+    detail_primary: str
+    detail_precautions: str
     haystack: str
 
 
 class DatabaseCatalog:
     def __init__(self) -> None:
         self._search_cache_lock = threading.Lock()
-        self._search_cache_signature: tuple[str, int, int, datetime | None] | None = None
+        self._search_cache_signature: tuple[object, ...] | None = None
         self._search_cache: tuple[_CatalogSearchRow, ...] = ()
         init_database()
         if settings.seed_demo_on_empty:
@@ -112,6 +123,8 @@ class DatabaseCatalog:
             schedule = row.schedule
             tat = row.tat
             code = row.code
+            detail_primary = row.detail_primary
+            detail_precautions = row.detail_precautions
             haystack = row.haystack
 
             score = 0
@@ -142,6 +155,10 @@ class DatabaseCatalog:
                     score += 6
                 if term in schedule:
                     score += 3
+                if term in detail_primary:
+                    score += 18
+                if "주의" in normalized_query and term in detail_precautions:
+                    score += 24
                 if term in haystack and score == 0:
                     score += 1
             if score:
@@ -167,7 +184,17 @@ class DatabaseCatalog:
                     TestVariant.status == "active",
                 )
             ).one()
-            signature = (source_key, int(count or 0), int(max_id or 0), latest_seen)
+            detail_count, detail_latest = session.execute(
+                select(func.count(TestPublicDetail.id), func.max(TestPublicDetail.updated_at))
+            ).one()
+            signature = (
+                source_key,
+                int(count or 0),
+                int(max_id or 0),
+                latest_seen,
+                int(detail_count or 0),
+                detail_latest,
+            )
             if signature == self._search_cache_signature:
                 return self._search_cache
 
@@ -199,6 +226,23 @@ class DatabaseCatalog:
                     schedule = normalize_search_text(variant.schedule_text)
                     tat = normalize_search_text(variant.tat_text)
                     code = test.source_test_code.casefold()
+                    detail_text = normalize_search_text(
+                        variant.public_detail.normalized_text if variant.public_detail else ""
+                    )
+                    detail_fields = (
+                        variant.public_detail.fields_json if variant.public_detail else {}
+                    )
+                    detail_precautions = normalize_search_text(
+                        detail_fields.get("채취방법 및 주의사항", "")
+                    )
+                    detail_primary = normalize_search_text(
+                        " ".join(
+                            [
+                                detail_precautions,
+                                detail_fields.get("임상적 의의", ""),
+                            ]
+                        )
+                    )
                     rows.append(
                         _CatalogSearchRow(
                             info=self._to_info(variant),
@@ -211,6 +255,8 @@ class DatabaseCatalog:
                             schedule=schedule,
                             tat=tat,
                             code=code,
+                            detail_primary=detail_primary,
+                            detail_precautions=detail_precautions,
                             haystack=" ".join(
                                 [
                                     name,
@@ -222,6 +268,7 @@ class DatabaseCatalog:
                                     schedule,
                                     tat,
                                     code,
+                                    detail_text,
                                 ]
                             ),
                         )
@@ -233,7 +280,23 @@ class DatabaseCatalog:
     def prompt_snapshot(self, items: list[TestInfo] | None = None) -> str:
         selected = items if items is not None else []
         return json.dumps(
-            [item.model_dump(mode="json") for item in selected[:10]],
+            [
+                {
+                    "code": item.code,
+                    "variant_key": item.variant_key,
+                    "name": item.name,
+                    "aliases": item.aliases[:4],
+                    "specimen": item.specimen,
+                    "container": item.container,
+                    "method": item.method,
+                    "schedule": item.schedule,
+                    "tat": item.tat,
+                    "public_details": self._prompt_details(item.public_details),
+                    "source_url": str(item.source_url) if item.source_url else None,
+                    "demo": item.demo,
+                }
+                for item in selected[:10]
+            ],
             ensure_ascii=False,
         )
 
@@ -257,6 +320,16 @@ class DatabaseCatalog:
                 )
                 or 0
             )
+            detail_count = (
+                session.scalar(
+                    select(func.count(TestPublicDetail.id))
+                    .join(TestVariant)
+                    .join(Test)
+                    .join(DataSource)
+                    .where(DataSource.key == source_key, TestPublicDetail.fetch_status == "completed")
+                )
+                or 0
+            )
             last_run = session.scalar(
                 select(IngestionRun)
                 .join(DataSource, IngestionRun.data_source_id == DataSource.id)
@@ -268,6 +341,7 @@ class DatabaseCatalog:
                 "source": source_key,
                 "tests": test_count,
                 "variants": variant_count,
+                "details": detail_count,
                 "last_sync_at": (
                     last_run.finished_at.isoformat() if last_run and last_run.finished_at else None
                 ),
@@ -285,6 +359,7 @@ class DatabaseCatalog:
                 joinedload(TestVariant.method),
                 joinedload(TestVariant.specimen),
                 joinedload(TestVariant.test).selectinload(Test.aliases),
+                joinedload(TestVariant.public_detail),
             )
         )
 
@@ -319,7 +394,32 @@ class DatabaseCatalog:
             source_url=variant.detail_url,
             updated_at=updated,
             demo=is_demo,
+            public_details=DatabaseCatalog._public_details(variant),
         )
+
+    @staticmethod
+    def _public_details(variant: TestVariant) -> dict[str, str]:
+        detail = variant.public_detail
+        if detail is None or detail.fetch_status != "completed":
+            return {}
+        values = dict(detail.fields_json)
+        values.update({f"용기 {key}": value for key, value in detail.container_json.items()})
+        return values
+
+    @staticmethod
+    def _prompt_details(details: dict[str, str], max_chars: int = 1400) -> dict[str, str]:
+        selected: dict[str, str] = {}
+        used = 0
+        for key, value in details.items():
+            if key in {"검사명", "SCL 검사코드", "검사방법", "검체명", "검사요일", "검사소요일"}:
+                continue
+            clipped = value[:500]
+            remaining = max_chars - used - len(key) - 2
+            if remaining <= 0:
+                break
+            selected[key] = clipped[:remaining]
+            used += len(key) + len(selected[key]) + 2
+        return selected
 
     def _seed_demo_if_empty(self) -> None:
         with SessionLocal.begin() as session:

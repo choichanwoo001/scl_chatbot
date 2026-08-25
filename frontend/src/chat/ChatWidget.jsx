@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import { Bot, MessageCircleMore, Minus, Send, ShieldCheck, X } from "lucide-react";
-import { FeedbackControls } from "./ChatForms.jsx";
 import { MessageBody } from "./MessageBody.jsx";
 import { useChatController } from "./useChatController.js";
 
@@ -50,13 +49,6 @@ export function ChatWidget() {
             <div className="message-bubble">
               <MessageBody message={message} onQuickQuestion={actions.sendMessage} onAuthenticate={actions.authenticate}
                 onHandoff={actions.handoff} onResultSelect={actions.selectResult} />
-              {message.liveGenerated && (
-                <div className="answer-provenance">
-                  실시간 OpenAI · {message.dataStatus === "public_document" ? "문서 RDB" : message.dataStatus === "public_database" ? "검사 RDB" : "정책 응답"}
-                  {message.sourceRefs?.length ? ` · 근거 ${message.sourceRefs.length}건` : ""}
-                </div>
-              )}
-              {message.feedbackEligible && <FeedbackControls message={message} onFeedback={actions.feedback} />}
             </div>
           </div>
         ))}

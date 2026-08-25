@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from ..dependencies import AppServices, get_services
 from ..schemas import ChatRequest, ChatResponse, HealthResponse
@@ -31,13 +31,19 @@ async def health(services: AppServices = Depends(get_services)) -> HealthRespons
 @router.post("/api/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
+    response: Response,
     services: AppServices = Depends(get_services),
 ) -> ChatResponse:
-    return await services.orchestrator.respond(
+    result = await services.orchestrator.respond(
         request.message,
         request.session_id,
         require_live=request.require_live,
     )
+    if result.timings_ms:
+        response.headers["Server-Timing"] = ", ".join(
+            f"{name};dur={duration:.1f}" for name, duration in result.timings_ms.items()
+        )
+    return result
 
 
 @router.delete("/api/sessions/{session_id}", status_code=204)

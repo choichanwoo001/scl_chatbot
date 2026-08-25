@@ -4,7 +4,12 @@ export const welcomeMessage = {
   id: "welcome",
   role: "assistant",
   kind: "text",
-  text: "안녕하세요. SCL 챗봇입니다. 검사명을 몰라도 증상·검체·소요일 같은 조건으로 찾아드릴 수 있어요.",
+  text: `궁금한 검사 정보를 빠르게 찾아드릴게요.
+
+## 이런 내용을 물어보세요
+- 검사명 또는 검사코드
+- 검체·용기 정보
+- 검사일·소요일`,
 };
 
 export function loadChatSession(storage = window.sessionStorage) {

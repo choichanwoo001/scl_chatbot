@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 from app.config import Settings
-from app.openai_gateway import ModelPlan, OpenAIGateway
+from app.openai_gateway import ModelPlan, ModeratedContent, OpenAIGateway
 from pydantic import ValidationError
 
 
@@ -58,6 +58,19 @@ class FlakyStructuredResponses(FakeResponses):
         return SimpleNamespace(output_parsed=self.parsed, id="resp_retry_ok")
 
 
+class FlaggedStructuredResponses(FakeResponses):
+    def parse(self, **kwargs: object) -> SimpleNamespace:
+        self.request = kwargs
+        return SimpleNamespace(
+            output_parsed=self.parsed,
+            id="resp_flagged",
+            moderation=SimpleNamespace(
+                input=SimpleNamespace(flagged=True),
+                output=SimpleNamespace(flagged=False),
+            ),
+        )
+
+
 class FakeModerations:
     def __init__(self, flagged: bool) -> None:
         self.flagged = flagged
@@ -96,6 +109,12 @@ def test_responses_request_uses_structured_output_without_storage_or_file_search
     assert request is not None
     assert request["text_format"] is ModelPlan
     assert request["store"] is False
+    assert request["text"] == {"verbosity": "low"}
+    assert request["reasoning"] == {"effort": "low"}
+    assert request["moderation"] == {
+        "model": "omni-moderation-latest",
+        "policy": {"input": {"mode": "score"}, "output": {"mode": "score"}},
+    }
     assert "tools" not in request
     assert request["input"][-1] == {"role": "user", "content": "HPV 검사 용기 알려줘"}
 
@@ -115,6 +134,14 @@ def test_missing_structured_result_raises_for_orchestrator_fallback() -> None:
 
     with pytest.raises(RuntimeError, match="structured result"):
         gateway.plan("검사 알려줘", [])
+
+
+def test_integrated_moderation_blocks_a_structured_result() -> None:
+    gateway = _gateway(_plan())
+    gateway.client.responses = FlaggedStructuredResponses(_plan())
+
+    with pytest.raises(ModeratedContent):
+        gateway.plan("차단 대상 입력", [])
 
 
 @pytest.mark.parametrize("flagged", [False, True])

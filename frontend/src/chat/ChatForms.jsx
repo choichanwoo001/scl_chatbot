@@ -66,34 +66,3 @@ export function HandoffForm({ onSubmit }) {
     </form>
   );
 }
-
-export function FeedbackControls({ message, onFeedback }) {
-  const [status, setStatus] = useState("idle");
-  const [details, setDetails] = useState({ reason: "", comment: "" });
-  const send = async (rating) => {
-    setStatus("sending");
-    try {
-      await onFeedback(message, rating, details);
-      setStatus("done");
-    } catch {
-      setStatus("error");
-    }
-  };
-  if (status === "done") return <p className="feedback-done">피드백 감사합니다.</p>;
-  return (
-    <div className="feedback-controls">
-      <span>답변이 도움이 됐나요?</span>
-      <div><button type="button" onClick={() => send("helpful")} disabled={status === "sending"}>도움됐어요</button>
-      <button type="button" onClick={() => setStatus("detail")} disabled={status === "sending"}>아쉬워요</button></div>
-      {status === "detail" && <div className="feedback-detail">
-        <select value={details.reason} onChange={(event) => setDetails((current) => ({ ...current, reason: event.target.value }))}>
-          <option value="">이유 선택</option><option value="incorrect">정보가 달라요</option>
-          <option value="not_found">원하는 내용을 못 찾았어요</option><option value="unclear">설명이 어려워요</option>
-        </select>
-        <input value={details.comment} maxLength={500} placeholder="추가 의견(선택)" onChange={(event) => setDetails((current) => ({ ...current, comment: event.target.value }))} />
-        <button type="button" onClick={() => send("not_helpful")}>보내기</button>
-      </div>}
-      {status === "error" && <span className="form-error">피드백 저장에 실패했습니다.</span>}
-    </div>
-  );
-}

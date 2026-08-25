@@ -21,12 +21,15 @@
 |---|---|---|
 | `OPENAI_API_KEY` | 실시간 채팅 | 백엔드 전용 |
 | `OPENAI_CHAT_MODEL` | 실시간 채팅 | 기본 `gpt-5.6-luna` |
+| `OPENAI_REASONING_EFFORT` | 실시간 채팅 | 기본 `low`; 지연 민감형 분류·근거 선택 |
+| `OPENAI_MAX_RETRIES` | 실시간 채팅 | 기본 `0`; 브라우저 35초 제한 안에서 실패 반환 |
 | `DATABASE_URL` | 외부 DB 사용 | 기본 SQLite |
 | `FIELD_ENCRYPTION_KEY` | 운영 상담 접수 | 고정 Fernet 키 |
 | `ALLOWED_ORIGINS` | 배포 | 실제 프런트 도메인 |
 | `OPENAI_VECTOR_STORE_ID` | Vector 전환 | 승인된 Store ID |
 | `VECTOR_SEARCH_ENABLED` | Vector 전환 | 기본 `false` |
 | `RESULT_API_*` | 개인 결과 연동 | Gateway·mTLS 설정 |
+| `SEED_DEMO_ON_EMPTY` | 개발·단위 테스트만 | 운영 기본 `false` |
 
 ## 3. 배포와 기동
 

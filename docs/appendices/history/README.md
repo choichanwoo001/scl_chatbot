@@ -12,5 +12,4 @@
 | `external-readiness-2026-08-22.md` | 외부 연동·OCR 점검 |
 | `refactoring-2026-08-22.md` | 백엔드 리팩토링 결과 |
 
-최신 테스트 수, 데이터 건수, Vector 상태는 [통합 평가 보고서](../../evaluation-report.md)를
-우선한다.
+현재 구현 상태는 `docs/` 루트의 현행 문서와 프로젝트 [README](../../../README.md)를 우선한다.

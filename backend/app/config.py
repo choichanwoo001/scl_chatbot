@@ -20,6 +20,7 @@ def _csv(value: str) -> tuple[str, ...]:
 class Settings:
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     openai_chat_model: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-5.6-luna")
+    openai_reasoning_effort: str = os.getenv("OPENAI_REASONING_EFFORT", "low")
     openai_vector_store_id: str | None = os.getenv("OPENAI_VECTOR_STORE_ID")
     vector_search_enabled: bool = os.getenv("VECTOR_SEARCH_ENABLED", "false").lower() in {
         "1",
@@ -70,8 +71,9 @@ class Settings:
     office_converter_cmd: str | None = os.getenv("OFFICE_CONVERTER_CMD") or None
     office_converter_timeout_seconds: int = int(os.getenv("OFFICE_CONVERTER_TIMEOUT_SECONDS", "120"))
     request_timeout_seconds: float = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
+    openai_max_retries: int = int(os.getenv("OPENAI_MAX_RETRIES", "0"))
     database_url: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
-    seed_demo_on_empty: bool = os.getenv("SEED_DEMO_ON_EMPTY", "true").lower() in {
+    seed_demo_on_empty: bool = os.getenv("SEED_DEMO_ON_EMPTY", "false").lower() in {
         "1",
         "true",
         "yes",
@@ -91,6 +93,11 @@ class Settings:
             and self.openai_api_key
             and self.openai_vector_store_id
         )
+
+    @property
+    def validated_reasoning_effort(self) -> str:
+        allowed = {"none", "low", "medium", "high", "xhigh", "max"}
+        return self.openai_reasoning_effort if self.openai_reasoning_effort in allowed else "low"
 
 
 settings = Settings()

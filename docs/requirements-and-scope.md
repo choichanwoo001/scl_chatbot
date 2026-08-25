@@ -77,5 +77,5 @@
 4. 백엔드·프런트 자동 테스트와 공개 검색 평가가 통과한다.
 5. 미연결 외부 시스템과 운영 전 필수 작업이 제출 문서에 명시된다.
 
-현재 증거는 [통합 평가 보고서](evaluation-report.md), 운영 전 조건은
+검증 절차는 [README](../README.md)와 [데모 가이드](demo-guide.md), 운영 전 조건은
 [한계와 로드맵](limitations-and-roadmap.md)에 정리한다.

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import statistics
 import sys
+import time
 from dataclasses import replace
 from typing import Any
 
@@ -88,15 +90,13 @@ def _run() -> None:
     # This evaluation deliberately excludes vector/file search even if an environment later sets it.
     gateway = OpenAIGateway(replace(settings, openai_vector_store_id=None))
     results: list[dict[str, Any]] = []
+    latencies_ms: list[float] = []
     history: list[dict[str, str]] = []
     first_test_plan: ModelPlan | None = None
 
     for case in CASES:
+        started = time.perf_counter()
         try:
-            flagged = gateway.moderate(case["query"])
-            if flagged:
-                results.append({"name": case["name"], "passed": False, "errors": ["moderation_flagged"]})
-                continue
             plan, response_id = gateway.plan(case["query"], [])
         except Exception as error:
             results.append(
@@ -108,6 +108,8 @@ def _run() -> None:
                 }
             )
             continue
+        elapsed_ms = (time.perf_counter() - started) * 1000
+        latencies_ms.append(elapsed_ms)
         errors = _evaluate(plan, case)
         if case["name"] == "test_typo":
             first_test_plan = plan
@@ -124,6 +126,7 @@ def _run() -> None:
                 "action": plan.requested_action,
                 "confidence": plan.confidence,
                 "response_id_present": bool(response_id),
+                "latency_ms": round(elapsed_ms, 1),
                 "errors": errors,
             }
         )
@@ -133,7 +136,10 @@ def _run() -> None:
         followup_errors.append("missing_first_turn")
     else:
         try:
+            started = time.perf_counter()
             followup, response_id = gateway.plan("그 검사는 며칠 걸려?", history)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            latencies_ms.append(elapsed_ms)
             if followup.domain != "test":
                 followup_errors.append(f"domain={followup.domain}")
             if not _references_resolve(followup):
@@ -147,6 +153,7 @@ def _run() -> None:
                     "action": followup.requested_action,
                     "confidence": followup.confidence,
                     "response_id_present": bool(response_id),
+                    "latency_ms": round(elapsed_ms, 1),
                     "errors": followup_errors,
                 }
             )
@@ -160,12 +167,19 @@ def _run() -> None:
                 }
             )
 
+    ordered_latencies = sorted(latencies_ms)
+    p95_index = max(0, min(len(ordered_latencies) - 1, int(len(ordered_latencies) * 0.95)))
     summary = {
         "ok": all(item["passed"] for item in results),
         "model": settings.openai_chat_model,
         "vector_store_used": False,
         "cases": len(results),
         "passes": sum(bool(item["passed"]) for item in results),
+        "latency_ms": {
+            "mean": round(statistics.fmean(latencies_ms), 1) if latencies_ms else 0.0,
+            "p50": round(statistics.median(latencies_ms), 1) if latencies_ms else 0.0,
+            "p95": round(ordered_latencies[p95_index], 1) if ordered_latencies else 0.0,
+        },
         "results": results,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))

@@ -92,3 +92,33 @@ def test_content_url_canonicalization_upgrades_scl_and_rejects_unknown_hosts() -
     assert canonical_content_url("https://youtu.be/example", fallback) == "https://youtu.be/example"
     assert canonical_content_url("http://localhost:8080/front/card", fallback) == fallback
     assert canonical_content_url("https://evil.example/front/card", fallback) == fallback
+
+
+def test_official_faq_parser_collects_every_page_and_inline_answer() -> None:
+    page_1 = "https://www.scllab.co.kr/front/bbsList.do?bbsId=BBS_0014&pageIndex=1"
+    page_2 = "https://www.scllab.co.kr/front/bbsList.do?bbsId=BBS_0014&pageIndex=2"
+    pages = {
+        page_1: """
+            <div class='paging'><a class='on'>1</a><a>2</a></div>
+            <table class='faqType'>
+              <tr class='trq'><td><a class='faqLink'>골다공증 관련 검사는?</a></td></tr>
+              <tr class='tra'><td><div class='traDesc'>골 형성 및 골 흡수 표지자</div></td></tr>
+            </table>
+        """,
+        page_2: """
+            <table class='faqType'>
+              <tr class='trq'><td><a class='faqLink'>HbA1C 채혈 시기는?</a></td></tr>
+              <tr class='tra'><td><div class='traDesc'>식사 여부와 관계없이 채혈 가능합니다.</div></td></tr>
+            </table>
+        """,
+    }
+
+    with _client(pages) as client:
+        fetched_pages, documents = _sync()._fetch_faqs(client, "BBS_0014")
+
+    assert len(fetched_pages) == 2
+    assert len(documents) == 2
+    assert documents[0]["document_type"] == "official_faq"
+    assert documents[0]["title"] == "골다공증 관련 검사는?"
+    assert documents[0]["body_text"] == "골 형성 및 골 흡수 표지자"
+    assert documents[1]["source_url"].endswith("pageIndex=2")

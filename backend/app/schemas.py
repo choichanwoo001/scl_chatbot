@@ -34,6 +34,7 @@ class TestInfo(BaseModel):
     source_url: HttpUrl | None = None
     updated_at: str
     demo: bool = True
+    public_details: dict[str, str] = Field(default_factory=dict)
 
 
 class Reply(BaseModel):
@@ -58,6 +59,7 @@ class ChatResponse(BaseModel):
     needs_handoff: bool = False
     medical_review_required: bool = False
     response_id: str | None = None
+    timings_ms: dict[str, float] = Field(default_factory=dict)
 
 
 class HealthResponse(BaseModel):
@@ -80,6 +82,7 @@ class CatalogStatus(BaseModel):
     source: str
     tests: int
     variants: int
+    details: int = 0
     last_sync_at: str | None = None
     last_sync_status: str | None = None
 

@@ -8,8 +8,8 @@ On first startup, when `DATABASE_URL` is not set and `data/scl_catalog.db` does 
 exist, the backend decompresses the snapshot to that ignored runtime path. The
 application can then use WAL mode without modifying the versioned snapshot.
 
-The snapshot includes the public test catalog, locations, routes, documents,
-attachment metadata, and extracted attachment text. It does not contain handoff
+The snapshot includes the public test catalog and detail-page guidance, locations, routes,
+documents, attachment metadata, and extracted attachment text. It does not contain handoff
 requests or chat feedback. The original downloaded attachments under
 `data/attachments/`, OCR runtime files under `data/ocr/`, local encryption keys,
 and WAL/SHM files are not versioned.
@@ -25,3 +25,11 @@ python scripts/validate_public_data.py
 When refreshing the snapshot, use SQLite's backup API (or stop the backend and
 checkpoint WAL first), verify the private-workflow tables are empty, run the
 integrity check, and then commit the new LFS object.
+
+```powershell
+.venv\Scripts\python scripts\build_public_snapshot.py
+```
+
+The snapshot builder uses SQLite's online backup API, removes handoff requests,
+chat feedback, and learned FAQ candidates from the copy, validates integrity,
+and only then replaces the compressed public snapshot.

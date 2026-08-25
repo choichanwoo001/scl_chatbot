@@ -589,6 +589,81 @@ class SCLPublicDataSync:
             self._fail_run(run_id, error)
             raise
 
+    def sync_faqs(self, board_id: str = "BBS_0014") -> SyncResult:
+        """Synchronize the official SCL FAQ board as first-party documents."""
+        dataset = "faqs"
+        run_id = self._start_run(dataset)
+        try:
+            owned_client = self._client is None
+            client = self._client or httpx.Client(
+                timeout=30,
+                follow_redirects=True,
+                headers={"User-Agent": "SCLChatPrototype/0.1 (public data sync)"},
+            )
+            try:
+                pages, documents = self._fetch_faqs(client, board_id)
+            finally:
+                if owned_client:
+                    client.close()
+            return self._store_documents(run_id, dataset, pages, documents)
+        except Exception as error:
+            self._fail_run(run_id, error)
+            raise
+
+    def _fetch_faqs(
+        self,
+        client: httpx.Client,
+        board_id: str,
+    ) -> tuple[list[tuple[int, str, str]], list[dict[str, Any]]]:
+        first_url = f"{SCL_BASE_URL}/front/bbsList.do?bbsId={board_id}&pageIndex=1"
+        first_html = self._get(client, first_url)
+        first_soup = BeautifulSoup(first_html, "html.parser")
+        page_numbers = [
+            int(text)
+            for node in first_soup.select(".paging a")
+            if (text := clean_text(node.get_text(" ", strip=True))).isdigit()
+        ]
+        total_pages = max(page_numbers, default=1)
+        pages = [(1, first_url, first_html)]
+        for page_number in range(2, total_pages + 1):
+            self._delay()
+            url = f"{SCL_BASE_URL}/front/bbsList.do?bbsId={board_id}&pageIndex={page_number}"
+            html = self._get(client, url)
+            if not BeautifulSoup(html, "html.parser").select("table.faqType tr.trq"):
+                raise ValueError(f"No FAQ records on {url}")
+            pages.append((page_number, url, html))
+
+        documents: list[dict[str, Any]] = []
+        for page_number, page_url, html in pages:
+            soup = BeautifulSoup(html, "html.parser")
+            for question_row in soup.select("table.faqType tr.trq"):
+                question_node = question_row.select_one(".faqLink")
+                answer_row = question_row.find_next_sibling("tr", class_="tra")
+                answer_node = answer_row.select_one(".traDesc") if answer_row else None
+                question = clean_text(question_node.get_text(" ", strip=True)) if question_node else ""
+                answer = clean_text(answer_node.get_text(" ", strip=True)) if answer_node else ""
+                if not question or not answer:
+                    continue
+                fingerprint = hashlib.sha256(
+                    normalize_search_text(question).encode("utf-8")
+                ).hexdigest()[:24]
+                documents.append(
+                    {
+                        "source_external_key": f"{board_id}:faq:{fingerprint}",
+                        "document_type": "official_faq",
+                        "board_id": board_id,
+                        "title": question,
+                        "summary": answer[:500],
+                        "body_text": answer,
+                        "published_at": None,
+                        "thumbnail_url": None,
+                        "source_url": page_url,
+                        "attachments": [],
+                        "page_number": page_number,
+                    }
+                )
+        return pages, documents
+
     def _fetch_board(
         self, client: httpx.Client, board_id: str, document_type: str, page_offset: int = 0
     ) -> tuple[list[tuple[int, str, str]], list[dict[str, Any]]]:

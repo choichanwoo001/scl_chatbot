@@ -20,6 +20,7 @@ def main() -> None:
             "locations",
             "routes",
             "content",
+            "faqs",
             "all",
         ],
     )
@@ -34,6 +35,7 @@ def main() -> None:
         "locations": sync.sync_locations,
         "routes": sync.sync_routes,
         "content": sync.sync_content,
+        "faqs": sync.sync_faqs,
     }
     selected = list(actions) if args.dataset == "all" else [args.dataset]
     results = [actions[name]() for name in selected]

@@ -186,6 +186,39 @@ class TestVariant(Base):
     method: Mapped[Method | None] = relationship()
     specimen: Mapped[Specimen | None] = relationship()
     billing_codes: Mapped[list[TestBillingCode]] = relationship(cascade="all, delete-orphan")
+    public_detail: Mapped[TestPublicDetail | None] = relationship(
+        back_populates="test_variant", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class TestPublicDetail(Base):
+    """Publicly visible fields extracted from an SCL test detail page."""
+
+    __tablename__ = "test_public_details"
+    __table_args__ = (
+        UniqueConstraint("test_variant_id", name="uq_test_public_detail_variant"),
+        Index("ix_test_public_details_status", "fetch_status", "last_success_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
+    test_variant_id: Mapped[int] = mapped_column(ForeignKey("test_variants.id"), nullable=False)
+    source_page_id: Mapped[int | None] = mapped_column(ForeignKey("source_pages.id"))
+    source_url: Mapped[str] = mapped_column(String(1000), nullable=False)
+    fields_json: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
+    container_json: Mapped[dict[str, str]] = mapped_column(JSON, default=dict, nullable=False)
+    full_text: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_text: Mapped[str] = mapped_column(Text, nullable=False)
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    fetch_status: Mapped[str] = mapped_column(String(30), default="completed", nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    last_fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    last_success_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+    test_variant: Mapped[TestVariant] = relationship(back_populates="public_detail")
 
 
 class TestBillingCode(Base):

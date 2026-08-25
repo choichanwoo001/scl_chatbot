@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import threading
 from collections.abc import Iterable
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 
 from .catalog import catalog
 from .config import Settings, settings
@@ -27,6 +28,7 @@ from .models import (
     TestTaxonomyLink,
 )
 from .normalization import clean_text, normalize_search_text
+from .schemas import TestInfo
 from .vector_search import (
     VECTOR_ENTITY_TYPES,
     VectorSearchProvider,
@@ -57,7 +59,23 @@ STOP_WORDS = {
     "무엇",
     "홈페이지",
     "검사",
+    "검사는",
+    "검사가",
+    "검사를",
+    "검사에",
+    "검사에서",
     "검사항목",
+    "어떤",
+    "어느",
+    "있나요",
+    "있습니까",
+    "인가요",
+    "가능한가요",
+    "가능한지",
+    "되나요",
+    "해주세요",
+    "관련된",
+    "관련한",
     "페이지",
     "메뉴",
     "링크",
@@ -81,6 +99,38 @@ class SearchHit:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class _AttachmentSearchRow:
+    attachment_id: int
+    content_id: int
+    file_name: str
+    normalized_file_name: str
+    file_type: str
+    download_url: str
+    document_id: int
+    document_title: str
+    document_source_url: str
+    document_normalized_title: str
+    text: str
+    normalized_text: str
+    page_number: int | None
+    section_label: str | None
+    extracted_at: datetime | None
+
+
+@dataclass(frozen=True)
+class _DocumentSearchRow:
+    document_id: int
+    title: str
+    normalized_title: str
+    normalized_extra: str
+    snippet: str | None
+    source_url: str
+    updated_at: datetime | None
+    document_type: str
+    board_id: str
+
+
 class PublicDataSearch:
     def __init__(
         self,
@@ -93,14 +143,37 @@ class PublicDataSearch:
         self.vector_search_calls = 0
         self.vector_search_errors = 0
         self.last_vector_error: str | None = None
+        self._attachment_cache_lock = threading.Lock()
+        self._attachment_cache_signature: tuple[
+            int,
+            int,
+            datetime | None,
+            datetime | None,
+        ] | None = None
+        self._attachment_cache: tuple[_AttachmentSearchRow, ...] = ()
+        self._document_cache_lock = threading.Lock()
+        self._document_cache_signature: tuple[int, int, datetime | None] | None = None
+        self._document_cache: tuple[_DocumentSearchRow, ...] = ()
 
-    def search(self, query: str, types: Iterable[str] | None = None, limit: int = 10) -> list[SearchHit]:
+    def search(
+        self,
+        query: str,
+        types: Iterable[str] | None = None,
+        limit: int = 10,
+        *,
+        test_candidates: list[TestInfo] | tuple[TestInfo, ...] | None = None,
+    ) -> list[SearchHit]:
         allowed = set(types or SEARCH_TYPES) & SEARCH_TYPES
         if not allowed:
             return []
         result_limit = max(1, min(limit, 50))
         retrieval_limit = max(result_limit, self.settings.vector_search_max_results)
-        lexical_hits = self._search_lexical(query, allowed, retrieval_limit)
+        lexical_hits = self._search_lexical(
+            query,
+            allowed,
+            retrieval_limit,
+            test_candidates=test_candidates,
+        )
         vector_types = allowed & VECTOR_ENTITY_TYPES
         if not vector_types or not self.settings.vector_search_configured:
             return lexical_hits[:result_limit]
@@ -121,6 +194,8 @@ class PublicDataSearch:
         query: str,
         types: Iterable[str] | None = None,
         limit: int = 10,
+        *,
+        test_candidates: list[TestInfo] | tuple[TestInfo, ...] | None = None,
     ) -> list[SearchHit]:
         allowed = set(types or SEARCH_TYPES) & SEARCH_TYPES
         if not allowed:
@@ -162,7 +237,12 @@ class PublicDataSearch:
                 ]
             )
             test_base = 55 if non_test_intent else 180
-            for index, item in enumerate(catalog.search(query, limit=max(limit, 10))):
+            candidates = (
+                list(test_candidates)[: max(limit, 10)]
+                if test_candidates is not None
+                else catalog.search(query, limit=max(limit, 10))
+            )
+            for index, item in enumerate(candidates):
                 hits.append(
                     SearchHit(
                         ref=f"test:{item.variant_key or item.code}",
@@ -204,85 +284,73 @@ class PublicDataSearch:
                             )
                         )
             if "attachment" in allowed and terms:
-                attachment_statement = (
-                    select(AttachmentChunk, AttachmentContent, DocumentAttachment, PublicDocument)
-                    .join(AttachmentContent, AttachmentContent.id == AttachmentChunk.attachment_content_id)
-                    .join(DocumentAttachment, DocumentAttachment.id == AttachmentContent.attachment_id)
-                    .join(PublicDocument, PublicDocument.id == DocumentAttachment.document_id)
-                    .where(
-                        AttachmentContent.extraction_status == "extracted",
-                        DocumentAttachment.status == "active",
-                        PublicDocument.status == "active",
-                    )
-                )
-                attachment_statement = attachment_statement.where(
-                    or_(
-                        *[
-                            or_(
-                                AttachmentChunk.normalized_text.contains(term),
-                                func.lower(DocumentAttachment.file_name).contains(term),
-                                PublicDocument.normalized_title.contains(term),
-                            )
-                            for term in terms
-                        ]
-                    )
-                ).limit(500)
-                attachment_rows = session.execute(attachment_statement)
                 best_attachments: dict[int, SearchHit] = {}
-                for chunk, content, attachment, document in attachment_rows:
-                    score = self._score(
+                for row in self._attachment_search_rows():
+                    if not any(
+                        term in row.normalized_text
+                        or term in row.normalized_file_name
+                        or term in row.document_normalized_title
+                        for term in terms
+                    ):
+                        continue
+                    score = self._score_normalized(
                         normalized,
                         terms,
-                        attachment.file_name,
-                        f"{document.title} {chunk.text}",
+                        row.normalized_file_name,
+                        f"{row.document_normalized_title} {row.normalized_text}",
                     )
                     score += self._attachment_intent_boost(
-                        normalized, terms, attachment.file_name, document.title
+                        normalized, terms, row.file_name, row.document_title
                     )
                     if score <= 0:
                         continue
                     hit = SearchHit(
-                        ref=f"attachment:{attachment.id}",
+                        ref=f"attachment:{row.attachment_id}",
                         entity_type="attachment",
-                        entity_id=str(attachment.id),
-                        title=attachment.file_name,
-                        snippet=self._snippet(chunk.text),
-                        source_url=document.source_url,
-                        updated_at=self._date(content.extracted_at),
+                        entity_id=str(row.attachment_id),
+                        title=row.file_name,
+                        snippet=row.text[:240] or None,
+                        source_url=row.document_source_url,
+                        updated_at=self._date(row.extracted_at),
                         score=score + 25,
                         metadata={
-                            "document_id": document.id,
-                            "document_title": document.title,
-                            "file_type": attachment.file_type,
-                            "download_url": attachment.download_url,
-                            "page_number": chunk.page_number,
-                            "section_label": chunk.section_label,
+                            "document_id": row.document_id,
+                            "document_title": row.document_title,
+                            "file_type": row.file_type,
+                            "download_url": row.download_url,
+                            "page_number": row.page_number,
+                            "section_label": row.section_label,
                         },
                     )
-                    previous = best_attachments.get(attachment.id)
+                    previous = best_attachments.get(row.attachment_id)
                     if previous is None or hit.score > previous.score:
-                        best_attachments[attachment.id] = hit
+                        best_attachments[row.attachment_id] = hit
                 hits.extend(best_attachments.values())
             if "document" in allowed:
-                for item in session.scalars(select(PublicDocument).where(PublicDocument.status == "active")):
-                    base_score = self._score(
-                        normalized, terms, item.title, f"{item.summary or ''} {item.body_text or ''}"
+                for item in self._document_search_rows():
+                    base_score = self._score_normalized(
+                        normalized,
+                        terms,
+                        item.normalized_title,
+                        item.normalized_extra,
                     )
                     score = (
                         base_score + self._type_boost(normalized, "document", item.document_type)
                         if base_score or not terms
                         else 0
                     )
+                    if base_score and item.document_type == "official_faq":
+                        score += 100
                     if score > 0:
                         hits.append(
                             SearchHit(
-                                ref=f"document:{item.id}",
+                                ref=f"document:{item.document_id}",
                                 entity_type="document",
-                                entity_id=str(item.id),
+                                entity_id=str(item.document_id),
                                 title=item.title,
-                                snippet=self._snippet(item.summary or item.body_text),
+                                snippet=item.snippet,
                                 source_url=item.source_url,
-                                updated_at=self._date(item.published_at or item.last_seen_at),
+                                updated_at=self._date(item.updated_at),
                                 score=score,
                                 metadata={"document_type": item.document_type, "board_id": item.board_id},
                             )
@@ -497,6 +565,144 @@ class PublicDataSearch:
         ranked = sorted(deduplicated.values(), key=lambda hit: (-hit.score, hit.entity_type, hit.title))
         return ranked[: max(1, min(limit, 50))]
 
+    def _attachment_search_rows(self) -> tuple[_AttachmentSearchRow, ...]:
+        with SessionLocal() as session:
+            count, max_id = session.execute(
+                select(func.count(AttachmentChunk.id), func.max(AttachmentChunk.id))
+            ).one()
+            latest_extracted = session.scalar(select(func.max(AttachmentContent.extracted_at)))
+            latest_document = session.scalar(select(func.max(PublicDocument.last_seen_at)))
+            signature = (int(count or 0), int(max_id or 0), latest_extracted, latest_document)
+            if signature == self._attachment_cache_signature:
+                return self._attachment_cache
+
+            with self._attachment_cache_lock:
+                if signature == self._attachment_cache_signature:
+                    return self._attachment_cache
+                statement = (
+                    select(
+                        AttachmentChunk.id,
+                        AttachmentChunk.text,
+                        AttachmentChunk.normalized_text,
+                        AttachmentChunk.page_number,
+                        AttachmentChunk.section_label,
+                        AttachmentContent.id,
+                        AttachmentContent.extracted_at,
+                        DocumentAttachment.id,
+                        DocumentAttachment.file_name,
+                        DocumentAttachment.file_type,
+                        DocumentAttachment.download_url,
+                        PublicDocument.id,
+                        PublicDocument.title,
+                        PublicDocument.normalized_title,
+                        PublicDocument.source_url,
+                    )
+                    .join(AttachmentContent, AttachmentContent.id == AttachmentChunk.attachment_content_id)
+                    .join(DocumentAttachment, DocumentAttachment.id == AttachmentContent.attachment_id)
+                    .join(PublicDocument, PublicDocument.id == DocumentAttachment.document_id)
+                    .where(
+                        AttachmentContent.extraction_status == "extracted",
+                        DocumentAttachment.status == "active",
+                        PublicDocument.status == "active",
+                    )
+                )
+                rows = tuple(
+                    _AttachmentSearchRow(
+                        attachment_id=attachment_id,
+                        content_id=content_id,
+                        file_name=file_name,
+                        normalized_file_name=normalize_search_text(file_name),
+                        file_type=file_type,
+                        download_url=download_url,
+                        document_id=document_id,
+                        document_title=document_title,
+                        document_source_url=document_source_url,
+                        document_normalized_title=document_normalized_title,
+                        text=text,
+                        normalized_text=normalized_text,
+                        page_number=page_number,
+                        section_label=section_label,
+                        extracted_at=extracted_at,
+                    )
+                    for (
+                        _chunk_id,
+                        text,
+                        normalized_text,
+                        page_number,
+                        section_label,
+                        content_id,
+                        extracted_at,
+                        attachment_id,
+                        file_name,
+                        file_type,
+                        download_url,
+                        document_id,
+                        document_title,
+                        document_normalized_title,
+                        document_source_url,
+                    ) in session.execute(statement)
+                )
+                self._attachment_cache = rows
+                self._attachment_cache_signature = signature
+                return rows
+
+    def _document_search_rows(self) -> tuple[_DocumentSearchRow, ...]:
+        with SessionLocal() as session:
+            count, max_id, latest_seen = session.execute(
+                select(
+                    func.count(PublicDocument.id),
+                    func.max(PublicDocument.id),
+                    func.max(PublicDocument.last_seen_at),
+                ).where(PublicDocument.status == "active")
+            ).one()
+            signature = (int(count or 0), int(max_id or 0), latest_seen)
+            if signature == self._document_cache_signature:
+                return self._document_cache
+
+            with self._document_cache_lock:
+                if signature == self._document_cache_signature:
+                    return self._document_cache
+                statement = select(
+                    PublicDocument.id,
+                    PublicDocument.title,
+                    PublicDocument.normalized_title,
+                    PublicDocument.summary,
+                    PublicDocument.body_text,
+                    PublicDocument.source_url,
+                    PublicDocument.published_at,
+                    PublicDocument.last_seen_at,
+                    PublicDocument.document_type,
+                    PublicDocument.board_id,
+                ).where(PublicDocument.status == "active")
+                rows = tuple(
+                    _DocumentSearchRow(
+                        document_id=document_id,
+                        title=title,
+                        normalized_title=normalized_title,
+                        normalized_extra=normalize_search_text(f"{summary or ''} {body_text or ''}"),
+                        snippet=self._snippet(summary or body_text),
+                        source_url=source_url,
+                        updated_at=published_at or last_seen_at,
+                        document_type=document_type,
+                        board_id=board_id,
+                    )
+                    for (
+                        document_id,
+                        title,
+                        normalized_title,
+                        summary,
+                        body_text,
+                        source_url,
+                        published_at,
+                        last_seen_at,
+                        document_type,
+                        board_id,
+                    ) in session.execute(statement)
+                )
+                self._document_cache = rows
+                self._document_cache_signature = signature
+                return rows
+
     def get(self, entity_type: str, entity_id: str) -> SearchHit | None:
         if entity_type == "test":
             item = catalog.get(None, entity_id) or catalog.get(entity_id)
@@ -667,15 +873,28 @@ class PublicDataSearch:
         if not hits:
             return "검색된 공개 데이터가 없습니다."
         return "\n".join(
-            f"- ref={hit.ref} | type={hit.entity_type} | title={hit.title} | detail={hit.snippet or '-'} | "
+            f"- ref={hit.ref} | type={hit.entity_type} | title={hit.title} | "
+            f"detail={(hit.snippet or '-')[:160]} | "
             f"url={hit.source_url or '-'} | updated_at={hit.updated_at or '-'}"
             for hit in hits
         )
 
     @staticmethod
     def _score(query: str, terms: list[str], title: str, extra: str) -> float:
-        title_n = normalize_search_text(title)
-        extra_n = normalize_search_text(extra)
+        return PublicDataSearch._score_normalized(
+            query,
+            terms,
+            normalize_search_text(title),
+            normalize_search_text(extra),
+        )
+
+    @staticmethod
+    def _score_normalized(
+        query: str,
+        terms: list[str],
+        title_n: str,
+        extra_n: str,
+    ) -> float:
         if not query:
             return 0
         score = 0.0
@@ -704,6 +923,8 @@ class PublicDataSearch:
             "attachment": ["첨부", "파일", "PDF", "공문", "자료", "양식", "다운로드"],
         }
         boost = 90 if any(cue in query for cue in cues.get(entity_type, [])) else 0
+        if entity_type == "document" and subtype == "official_faq":
+            boost += 40
         if subtype and subtype.replace("_", " ") in query:
             boost += 10
         return boost

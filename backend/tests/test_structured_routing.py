@@ -4,6 +4,7 @@ from app.models import DataSource, PublicDocument, ServiceLocation
 from app.normalization import normalize_search_text
 from app.openai_gateway import ModelCitation, ModelPlan
 from app.orchestrator import ChatOrchestrator
+from app.schemas import TestInfo as CatalogTestInfo
 
 
 def make_orchestrator() -> ChatOrchestrator:
@@ -26,6 +27,59 @@ def test_resolves_a_matched_test_code_to_catalog_data() -> None:
     assert reply.kind == "test"
     assert matched is not None
     assert matched.code == "DEMO-C5621"
+
+
+def test_matched_test_keeps_selected_public_document_citation() -> None:
+    document_id, _ = _seed_routing_public_data()
+    plan = ModelPlan(
+        domain="test",
+        sub_intent="request_preparation_guide",
+        requested_action="explain",
+        answer="공개 안내에 따른 준비사항입니다.",
+        matched_test_code="DEMO-C5621",
+        matched_content_id=f"document:{document_id}",
+        confidence=0.98,
+    )
+
+    reply, matched = make_orchestrator()._reply_from_plan(plan)
+
+    assert matched is not None
+    assert reply.kind == "test"
+    assert any(item.ref == f"document:{document_id}" for item in reply.citations)
+
+
+def test_public_detail_supporting_test_becomes_a_verified_citation() -> None:
+    test = CatalogTestInfo(
+        code="30130",
+        variant_key="30130:100",
+        name="Widal test",
+        specimen="Serum",
+        method="Card응집법",
+        schedule="월~토/주간",
+        tat="1일",
+        source_title="SCL 검사항목조회",
+        source_url="https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=30130&sampcode=100",
+        updated_at="2026-08-25",
+        demo=False,
+        public_details={"채취방법 및 주의사항": "검체 보관 시 유의사항"},
+    )
+    plan = ModelPlan(
+        domain="test",
+        sub_intent="request_preparation_guide",
+        requested_action="explain",
+        answer="Widal test 공개 주의사항입니다.",
+        supporting_test_variant_keys=["30130:100"],
+    )
+
+    reply, matched = make_orchestrator()._reply_from_plan(
+        plan,
+        trusted_hits={},
+        trusted_tests=[test],
+    )
+
+    assert matched is None
+    assert reply.data_status == "public_database"
+    assert [citation.ref for citation in reply.citations] == ["test:30130:100"]
 
 
 def test_uses_candidate_codes_for_clarification_choices() -> None:

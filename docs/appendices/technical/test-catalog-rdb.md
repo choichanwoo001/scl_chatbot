@@ -13,6 +13,7 @@ erDiagram
     DATA_SOURCES ||--o{ INGESTION_RUNS : synchronized_by
     TESTS ||--o{ TEST_ALIASES : has
     TESTS ||--o{ TEST_VARIANTS : has
+    TEST_VARIANTS ||--o| TEST_PUBLIC_DETAILS : exposes
     TEST_VARIANTS }o--o| METHODS : uses
     TEST_VARIANTS }o--o| SPECIMENS : accepts
     TEST_VARIANTS ||--o{ TEST_BILLING_CODES : maps
@@ -23,6 +24,10 @@ erDiagram
 ```
 
 `tests`는 검사코드 단위 마스터이고 `test_variants`는 원본 `itemcode:sampcode` 단위 행입니다. 같은 검사코드가 서로 다른 검체로 반복될 수 있으므로 변형을 합치지 않습니다.
+
+`test_public_details`는 로그인 없이 볼 수 있는 각 검사 상세 페이지의 참고치, 채취방법 및 주의사항,
+임상적 의의, 증감, 급여기준과 용기 안내를 원문 URL·내용 해시와 함께 저장합니다. 이 본문은 검사
+자연어 검색과 챗봇 근거에 포함되며, 공개 페이지에 없는 내용은 보완하거나 추론하지 않습니다.
 
 ## 핵심 무결성 규칙
 
@@ -48,6 +53,7 @@ erDiagram
 ```powershell
 $env:PYTHONPATH="backend"
 .venv\Scripts\python scripts\crawl_scl_tests.py
+.venv\Scripts\python scripts\sync_scl_test_details.py
 ```
 
 기본 저장소는 `data/scl_catalog.db`이며 `DATABASE_URL`로 PostgreSQL을 사용할 수 있습니다.

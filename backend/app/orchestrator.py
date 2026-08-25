@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 import uuid
 from dataclasses import dataclass, field
 
@@ -11,8 +12,8 @@ from .chat_policy import ChatPolicy
 from .config import Settings
 from .guardrails import InputInspection, inspect_input
 from .offline_chat import OfflineChatResponder
-from .openai_gateway import ModelPlan, OpenAIGateway
-from .public_search import PublicDataSearch, public_search
+from .openai_gateway import ModelPlan, ModeratedContent, OpenAIGateway, RetrievalContext
+from .public_search import PublicDataSearch, SearchHit, public_search
 from .schemas import ChatResponse, Reply, TestInfo
 
 
@@ -67,13 +68,64 @@ class ChatOrchestrator:
         self,
         message: str,
         history: list[dict[str, str]],
-    ) -> tuple[bool, ModelPlan | None, str | None]:
+    ) -> tuple[
+        bool,
+        ModelPlan | None,
+        str | None,
+        RetrievalContext | None,
+        dict[str, float],
+    ]:
         assert self.gateway is not None
-        flagged = await asyncio.to_thread(self.gateway.moderate, message)
+        retrieve = getattr(self.gateway, "retrieve", None)
+        timings: dict[str, float] = {}
+
+        async def timed_call(name: str, function, *args, **kwargs):  # type: ignore[no-untyped-def]
+            started = time.perf_counter()
+            result = await asyncio.to_thread(function, *args, **kwargs)
+            timings[name] = round((time.perf_counter() - started) * 1000, 1)
+            return result
+
+        integrated_moderation = bool(
+            getattr(self.gateway, "uses_integrated_moderation", False)
+            and not self.public_search.settings.vector_search_configured
+        )
+        if integrated_moderation:
+            retrieval = await timed_call("retrieval", retrieve, message)
+            try:
+                plan, response_id = await timed_call(
+                    "model", self.gateway.plan, message, history, retrieval
+                )
+            except ModeratedContent:
+                return True, None, None, retrieval, timings
+            return False, plan, response_id, retrieval, timings
+        if retrieve is None:
+            flagged = await timed_call("moderation", self.gateway.moderate, message)
+            retrieval = None
+        elif self.public_search.settings.vector_search_configured:
+            # A vector search sends the query to an external service, so moderation
+            # must finish first when that optional path is enabled.
+            flagged = await timed_call("moderation", self.gateway.moderate, message)
+            retrieval = None if flagged else await timed_call("retrieval", retrieve, message)
+        else:
+            moderation_task = asyncio.create_task(
+                timed_call("moderation", self.gateway.moderate, message)
+            )
+            retrieval_task = asyncio.create_task(timed_call("retrieval", retrieve, message))
+            flagged, retrieval = await asyncio.gather(moderation_task, retrieval_task)
         if flagged:
-            return True, None, None
-        plan, response_id = await asyncio.to_thread(self.gateway.plan, message, history)
-        return False, plan, response_id
+            return True, None, None, retrieval, timings
+        if retrieval is None:
+            plan, response_id = await timed_call("model", self.gateway.plan, message, history)
+        else:
+            plan, response_id = await timed_call(
+                "model",
+                self.gateway.plan,
+                message,
+                history,
+                retrieval,
+                integrated_moderation=False,
+            )
+        return False, plan, response_id, retrieval, timings
 
     async def respond(
         self,
@@ -82,6 +134,7 @@ class ChatOrchestrator:
         *,
         require_live: bool = False,
     ) -> ChatResponse:
+        response_started = time.perf_counter()
         current_session_id, state = self.sessions.get(session_id)
         inspection = inspect_input(message, self.settings.max_input_chars)
 
@@ -92,7 +145,7 @@ class ChatOrchestrator:
 
         if self.gateway:
             try:
-                flagged, plan, response_id = await self._call_gateway(
+                flagged, plan, response_id, retrieval, timings = await self._call_gateway(
                     inspection.model_input,
                     state.history,
                 )
@@ -118,13 +171,16 @@ class ChatOrchestrator:
                     data_status="no_source",
                 )
                 self.sessions.append(state, inspection.model_input, reply.text)
-                return self._response(
+                response = self._response(
                     current_session_id,
                     inspection,
                     reply,
                     domain="safety",
                     safety_action="block",
                 )
+                timings["total"] = round((time.perf_counter() - response_started) * 1000, 1)
+                response.timings_ms = timings
+                return response
 
             assert plan is not None
             self.policy.apply_followup(
@@ -134,15 +190,27 @@ class ChatOrchestrator:
                 state.last_test_variant_key,
             )
             flags = self.policy.enforce(plan)
-            self.reply_builder.apply_document_fallback(plan, inspection.model_input)
-            reply, matched = self._reply_from_plan(plan)
+            grounding_started = time.perf_counter()
+            trusted_hits = retrieval.hits_by_ref if retrieval else None
+            trusted_tests = list(retrieval.test_candidates) if retrieval else None
+            self.reply_builder.apply_document_fallback(
+                plan,
+                inspection.model_input,
+                trusted_hits=list(trusted_hits.values()) if trusted_hits is not None else None,
+            )
+            reply, matched = self._reply_from_plan(
+                plan,
+                trusted_hits=trusted_hits,
+                trusted_tests=trusted_tests,
+            )
+            timings["grounding"] = round((time.perf_counter() - grounding_started) * 1000, 1)
             if matched:
                 state.last_test_code = matched.code
                 state.last_test_variant_key = matched.variant_key
             if inspection.category == "profanity_with_intent":
                 reply.text = "표현은 조금만 부드럽게 부탁드려요. " + reply.text
             self.sessions.append(state, inspection.model_input, reply.text)
-            return self._response(
+            response = self._response(
                 current_session_id,
                 inspection,
                 reply,
@@ -155,6 +223,9 @@ class ChatOrchestrator:
                 safety_action="handoff" if flags.needs_handoff else None,
                 response_id=response_id,
             )
+            timings["total"] = round((time.perf_counter() - response_started) * 1000, 1)
+            response.timings_ms = timings
+            return response
         if require_live:
             raise LiveChatUnavailable(
                 "OpenAI API가 연결되지 않아 실시간 답변을 생성할 수 없습니다. 준비된 답변으로 대체하지 않았습니다."
@@ -185,8 +256,18 @@ class ChatOrchestrator:
             )
         return None
 
-    def _reply_from_plan(self, plan: ModelPlan) -> tuple[Reply, TestInfo | None]:
-        return self.reply_builder.build(plan)
+    def _reply_from_plan(
+        self,
+        plan: ModelPlan,
+        *,
+        trusted_hits: dict[str, SearchHit] | None = None,
+        trusted_tests: list[TestInfo] | None = None,
+    ) -> tuple[Reply, TestInfo | None]:
+        return self.reply_builder.build(
+            plan,
+            trusted_hits=trusted_hits,
+            trusted_tests=trusted_tests,
+        )
 
     def _demo_reply(self, query: str, state: SessionState) -> tuple[Reply, str]:
         result = self.offline_responder.respond(

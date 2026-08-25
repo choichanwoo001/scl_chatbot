@@ -20,21 +20,26 @@ export function chatReducer(state, action) {
     case "health_received":
       return { ...state, connectionMode: action.mode };
     case "send_started":
-      return { ...state, isSending: true, query: "" };
+      return {
+        ...state,
+        isSending: true,
+        query: "",
+        messages: [...state.messages, action.userMessage],
+      };
     case "send_succeeded":
       return {
         ...state,
         isSending: false,
         sessionId: action.sessionId || state.sessionId,
         connectionMode: action.mode,
-        messages: [...state.messages, action.userMessage, action.assistantMessage],
+        messages: [...state.messages, action.assistantMessage],
       };
     case "send_failed":
       return {
         ...state,
         isSending: false,
         connectionMode: "unavailable",
-        messages: [...state.messages, action.userMessage, action.errorMessage],
+        messages: [...state.messages, action.errorMessage],
       };
     case "message_appended":
       return { ...state, messages: [...state.messages, action.message] };

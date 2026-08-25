@@ -10,11 +10,23 @@ test("creates a live-chat state from a restored browser session", () => {
   assert.equal(state.connectionMode, "checking");
 });
 
-test("records a successful live response atomically", () => {
-  const initial = { ...createInitialChatState(null), isSending: true };
+test("shows the user message as soon as sending starts", () => {
+  const initial = createInitialChatState(null);
   const state = chatReducer(initial, {
+    type: "send_started", userMessage: { id: "user", text: "질문" },
+  });
+  assert.equal(state.isSending, true);
+  assert.equal(state.query, "");
+  assert.deepEqual(state.messages.slice(-1).map((message) => message.id), ["user"]);
+});
+
+test("keeps the user message when a live response succeeds", () => {
+  const started = chatReducer(createInitialChatState(null), {
+    type: "send_started", userMessage: { id: "user" },
+  });
+  const state = chatReducer(started, {
     type: "send_succeeded", sessionId: "server-session", mode: "openai",
-    userMessage: { id: "user" }, assistantMessage: { id: "assistant" },
+    assistantMessage: { id: "assistant" },
   });
   assert.equal(state.sessionId, "server-session");
   assert.equal(state.connectionMode, "openai");
@@ -23,10 +35,13 @@ test("records a successful live response atomically", () => {
 });
 
 test("keeps an explicit error instead of synthesizing a fallback reply", () => {
-  const initial = { ...createInitialChatState(null), isSending: true };
-  const state = chatReducer(initial, {
-    type: "send_failed", userMessage: { id: "user" }, errorMessage: { id: "error", error: true },
+  const started = chatReducer(createInitialChatState(null), {
+    type: "send_started", userMessage: { id: "user" },
+  });
+  const state = chatReducer(started, {
+    type: "send_failed", errorMessage: { id: "error", error: true },
   });
   assert.equal(state.connectionMode, "unavailable");
+  assert.deepEqual(state.messages.slice(-2).map((message) => message.id), ["user", "error"]);
   assert.equal(state.messages.at(-1).error, true);
 });

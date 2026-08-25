@@ -7,7 +7,6 @@ import {
   listResults,
   logoutResults,
   sendChatMessage,
-  submitFeedback,
   submitHandoff,
 } from "../lib/chatApi.js";
 import {
@@ -24,14 +23,7 @@ function messageId(prefix) {
 function assistantMessage(result) {
   return {
     id: messageId("assistant"), role: "assistant", ...result.reply,
-    responseId: result.response_id || null,
-    question: result.displayed_input,
-    domain: result.domain,
-    subIntent: result.sub_intent,
-    sourceRefs: (result.reply.citations || []).map((item) => item.ref).filter(Boolean),
     liveGenerated: result.mode === "openai",
-    dataStatus: result.reply.data_status,
-    feedbackEligible: !["result_auth_form", "handoff_form"].includes(result.reply.kind),
   };
 }
 
@@ -64,22 +56,23 @@ export function useChatController() {
   const sendMessage = async (value) => {
     const trimmed = value.trim();
     if (!trimmed || state.isSending) return;
-    dispatch({ type: "send_started" });
+    dispatch({
+      type: "send_started",
+      userMessage: { id: messageId("user"), role: "user", kind: "text", text: trimmed },
+    });
     try {
       const result = await sendChatMessage({ message: trimmed, sessionId: state.sessionId });
       dispatch({
         type: "send_succeeded",
         sessionId: result.session_id,
         mode: result.mode,
-        userMessage: { id: messageId("user"), role: "user", kind: "text", text: result.displayed_input },
         assistantMessage: assistantMessage(result),
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "실시간 응답을 생성하지 못했습니다.";
       dispatch({
         type: "send_failed",
-        userMessage: { id: messageId("user"), role: "user", kind: "text", text: trimmed },
-        errorMessage: { id: messageId("error"), role: "assistant", kind: "text", text: detail, error: true, feedbackEligible: false },
+        errorMessage: { id: messageId("error"), role: "assistant", kind: "text", text: detail, error: true },
       });
     }
   };
@@ -110,19 +103,6 @@ export function useChatController() {
     } });
   };
 
-  const feedback = (message, rating, details) => submitFeedback({
-    session_id: state.sessionId,
-    response_id: message.responseId,
-    rating,
-    reason: details.reason || null,
-    comment: details.comment || null,
-    question: message.question,
-    answer: message.text,
-    domain: message.domain,
-    sub_intent: message.subIntent,
-    source_refs: message.sourceRefs || [],
-  });
-
   const closeSession = () => {
     endingSession.current = true;
     clearChatSession();
@@ -144,7 +124,6 @@ export function useChatController() {
       authenticate,
       selectResult,
       handoff,
-      feedback,
       closeSession,
       reopen,
     },
