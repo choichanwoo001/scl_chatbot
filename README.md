@@ -163,7 +163,13 @@ $env:PYTHONPATH="backend"
 
 ### Docker Compose
 
-```bash
+담당자가 `main`의 최신 코드와 Git LFS 공개 데이터 스냅샷을 동일하게 받아 실행하려면 프로젝트
+루트에서 다음 순서로 실행합니다.
+
+```powershell
+git checkout main
+git pull
+git lfs pull
 docker compose up --build
 ```
 

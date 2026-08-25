@@ -35,11 +35,16 @@
 
 ### Docker Compose
 
+담당자는 프로젝트 루트에서 최신 `main`과 Git LFS 공개 데이터 스냅샷을 받은 뒤 실행한다.
+
 ```powershell
-docker compose build
-docker compose up -d
-docker compose ps
+git checkout main
+git pull
+git lfs pull
+docker compose up --build
 ```
+
+백그라운드 실행이 필요하면 마지막 명령에 `-d`를 추가하고 `docker compose ps`로 상태를 확인한다.
 
 ### 로컬 백엔드
 

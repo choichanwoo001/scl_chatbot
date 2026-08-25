@@ -24,8 +24,19 @@ models are materialized instead of remaining LFS pointers.
 
 ## Verification
 
+Start the reviewer environment from the project root with the same `main` revision
+and materialized Git LFS snapshot:
+
 ```powershell
+git checkout main
+git pull
 git lfs pull
+docker compose up --build
+```
+
+For the full local verification suite, run:
+
+```powershell
 $env:PYTHONPATH = "backend"
 python -m pytest -q backend/tests
 python scripts/validate_public_data.py

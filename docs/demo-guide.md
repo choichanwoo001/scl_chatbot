@@ -6,11 +6,18 @@
 
 ### Docker Compose
 
+담당자 환경에서는 프로젝트 루트에서 최신 `main`과 Git LFS 공개 데이터 스냅샷을 먼저 받은 뒤
+실행한다.
+
 ```powershell
-Copy-Item .env.example .env
-# .env에 OPENAI_API_KEY를 서버용으로만 설정
+git checkout main
+git pull
+git lfs pull
 docker compose up --build
 ```
+
+최초 실행 전 `Copy-Item .env.example .env`로 환경 파일을 만들고 `.env`의
+`OPENAI_API_KEY`를 서버용으로만 설정한다. 이미 로컬 설정이 있다면 기존 `.env`를 유지한다.
 
 - 프런트: `http://localhost:8080`
 - 백엔드: `http://localhost:8000`
