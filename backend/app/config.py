@@ -6,9 +6,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 ROOT = Path(__file__).resolve().parents[2]
+
+load_dotenv(ROOT / ".env")
+if os.getenv("SCL_SKIP_LOCAL_ENV", "false").lower() not in {"1", "true", "yes"}:
+    load_dotenv(ROOT / ".env.local", override=True)
 DEFAULT_DATABASE_URL = f"sqlite:///{(ROOT / 'data' / 'scl_catalog.db').as_posix()}"
 
 
@@ -18,7 +20,17 @@ def _csv(value: str) -> tuple[str, ...]:
 
 @dataclass(frozen=True)
 class Settings:
+    llm_provider: str = os.getenv("LLM_PROVIDER", "gemini" if os.getenv("GEMINI_API_KEY") else "openai")
+    gemini_api_key: str | None = os.getenv("GEMINI_API_KEY")
+    gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+    gemini_embedding_model: str = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+    gemini_embedding_dimensions: int = int(os.getenv("GEMINI_EMBEDDING_DIMENSIONS", "128"))
+    gemini_daily_request_limit: int = int(os.getenv("GEMINI_DAILY_REQUEST_LIMIT", "20"))
+    gemini_vector_index_path: str = os.getenv(
+        "GEMINI_VECTOR_INDEX_PATH", str(ROOT / "data" / "gemini_vector_index.json")
+    )
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+    openai_base_url: str | None = os.getenv("OPENAI_BASE_URL") or None
     openai_chat_model: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-5.6-luna")
     openai_reasoning_effort: str = os.getenv("OPENAI_REASONING_EFFORT", "low")
     openai_vector_store_id: str | None = os.getenv("OPENAI_VECTOR_STORE_ID")
@@ -38,7 +50,11 @@ class Settings:
     allowed_origins: tuple[str, ...] = _csv(
         os.getenv(
             "ALLOWED_ORIGINS",
-            "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+            (
+                "http://localhost:5173,http://127.0.0.1:5173,"
+                "http://localhost:4173,http://127.0.0.1:4173,"
+                "http://localhost:8080,http://127.0.0.1:8080"
+            ),
         )
     )
     max_input_chars: int = int(os.getenv("MAX_INPUT_CHARS", "500"))
@@ -72,6 +88,24 @@ class Settings:
     office_converter_timeout_seconds: int = int(os.getenv("OFFICE_CONVERTER_TIMEOUT_SECONDS", "120"))
     request_timeout_seconds: float = float(os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
     openai_max_retries: int = int(os.getenv("OPENAI_MAX_RETRIES", "0"))
+    external_web_search_enabled: bool = os.getenv(
+        "EXTERNAL_WEB_SEARCH_ENABLED", "false"
+    ).lower() in {"1", "true", "yes"}
+    external_web_search_model: str = os.getenv(
+        "EXTERNAL_WEB_SEARCH_MODEL", os.getenv("OPENAI_CHAT_MODEL", "gpt-5.6-luna")
+    )
+    external_web_search_allowed_domains: tuple[str, ...] = _csv(
+        os.getenv(
+            "EXTERNAL_WEB_SEARCH_ALLOWED_DOMAINS",
+            (
+                "scllab.co.kr,kdca.go.kr,mfds.go.kr,hira.or.kr,"
+                "pubmed.ncbi.nlm.nih.gov,clinicaltrials.gov,who.int,cdc.gov,fda.gov"
+            ),
+        )
+    )
+    external_web_search_timeout_seconds: float = float(
+        os.getenv("EXTERNAL_WEB_SEARCH_TIMEOUT_SECONDS", "15")
+    )
     database_url: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
     seed_demo_on_empty: bool = os.getenv("SEED_DEMO_ON_EMPTY", "false").lower() in {
         "1",
@@ -84,10 +118,26 @@ class Settings:
 
     @property
     def mode(self) -> str:
+        if self.llm_provider == "gemini" and self.gemini_api_key:
+            return "gemini"
         return "openai" if self.openai_api_key else "demo_fallback"
 
     @property
+    def chat_model(self) -> str:
+        return self.gemini_model if self.mode == "gemini" else self.openai_chat_model
+
+    @property
+    def live_chat_available(self) -> bool:
+        return self.mode in {"gemini", "openai"}
+
+    @property
     def vector_search_configured(self) -> bool:
+        if self.llm_provider == "gemini":
+            return bool(
+                self.vector_search_enabled
+                and self.gemini_api_key
+                and Path(self.gemini_vector_index_path).is_file()
+            )
         return bool(
             self.vector_search_enabled
             and self.openai_api_key
@@ -98,6 +148,14 @@ class Settings:
     def validated_reasoning_effort(self) -> str:
         allowed = {"none", "low", "medium", "high", "xhigh", "max"}
         return self.openai_reasoning_effort if self.openai_reasoning_effort in allowed else "low"
+
+    @property
+    def external_web_search_configured(self) -> bool:
+        return bool(
+            self.external_web_search_enabled
+            and self.openai_api_key
+            and self.external_web_search_allowed_domains
+        )
 
 
 settings = Settings()

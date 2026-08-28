@@ -23,7 +23,7 @@ function messageId(prefix) {
 function assistantMessage(result) {
   return {
     id: messageId("assistant"), role: "assistant", ...result.reply,
-    liveGenerated: result.mode === "openai",
+    liveGenerated: result.mode === "openai" || result.mode === "gemini",
   };
 }
 

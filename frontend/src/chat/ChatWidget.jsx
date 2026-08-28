@@ -35,13 +35,13 @@ export function ChatWidget() {
     <aside className="chat-panel" aria-label="SCL AI 챗봇" data-testid="chat-panel">
       <header className="chat-header">
         <div className="bot-mark"><img src="/assets/scl/scl-logo.svg" alt="" /></div>
-        <div><strong>SCL 챗봇</strong><span><i className={state.connectionMode === "openai" ? "is-live" : ""} /> {state.connectionMode === "openai" ? "OpenAI 실시간 전용" : state.connectionMode === "checking" ? "연결 확인 중" : "실시간 연결 오류"} · 시연용</span></div>
+        <div><strong>SCL 챗봇</strong><span><i className={["openai", "gemini"].includes(state.connectionMode) ? "is-live" : ""} /> {state.connectionMode === "gemini" ? "Gemini 실시간" : state.connectionMode === "openai" ? "OpenAI 실시간" : state.connectionMode === "demo_fallback" ? "서버 검색 모드" : state.connectionMode === "checking" ? "연결 확인 중" : "서버 연결 오류"} · 시연용</span></div>
         <div className="chat-header-actions">
           <button type="button" onClick={() => actions.setOpen(false)} aria-label="챗봇 최소화"><Minus size={20} /></button>
           <button type="button" onClick={actions.closeSession} aria-label="채팅 세션 종료"><X size={20} /></button>
         </div>
       </header>
-      <div className="safety-strip"><ShieldCheck size={15} /> OpenAI 실시간 생성 · SCL 공개 RDB 근거 · fallback 미사용</div>
+      <div className="safety-strip"><ShieldCheck size={15} /> 검증된 SCL 자료 · 부족 시 도메인 제한 검색과 근거 링크 제공</div>
       <div className="message-list" ref={listRef} aria-live="polite">
         {state.messages.map((message) => (
           <div className={`message ${message.role}`} key={message.id}>

@@ -6,6 +6,11 @@ from .openai_gateway import ModelPlan
 from .public_search import PublicDataSearch, SearchHit
 from .schemas import Citation, Reply, TestInfo
 
+NO_SOURCE_TEXT = (
+    "확인된 공개 자료에서 답변 근거를 찾지 못했습니다. "
+    "확인되지 않은 내용을 추측하지 않았습니다. 검사명·검사코드나 찾으시는 문서를 더 구체적으로 알려주세요."
+)
+
 
 class GroundedReplyBuilder:
     """Resolves model-authored references against RDB data before replying."""
@@ -44,15 +49,14 @@ class GroundedReplyBuilder:
                 data_status="no_source",
             ), None
 
-        matched = (
-            self.catalog.get(plan.matched_test_code, plan.matched_test_variant_key)
-            if plan.domain == "test"
-            else None
-        )
+        matched = self._matched_test(plan, trusted_tests)
         selected_hits = self._selected_hits(plan, trusted_hits)
         supporting_tests = self._supporting_tests(plan, trusted_tests)
         if matched:
-            reply = self.test_reply(matched, plan.answer)
+            reply = self.test_reply(
+                matched,
+                "확인된 SCL 공개 검사 항목입니다. 검사 조건은 아래 공개 데이터 카드에서 확인해 주세요.",
+            )
             for hit in selected_hits:
                 citation = self.citation_from_hit(hit)
                 if citation and all(existing.ref != citation.ref for existing in reply.citations):
@@ -61,39 +65,60 @@ class GroundedReplyBuilder:
             return reply, matched
 
         if selected_hits:
-            citations = [self.citation_from_hit(hit) for hit in selected_hits]
-            self._append_test_citations(citations, supporting_tests)
-            return Reply(
-                text=plan.answer,
-                citations=[citation for citation in citations if citation],
-                data_status=(
-                    "public_database"
-                    if supporting_tests
-                    else "public_document"
-                    if all(hit.entity_type in {"document", "attachment", "faq"} for hit in selected_hits)
-                    else "public_database"
-                ),
-            ), None
+            reply = self.public_reply(selected_hits)
+            self._append_test_citations(reply.citations, supporting_tests)
+            if supporting_tests and reply.data_status == "public_document":
+                reply.data_status = "mixed"
+                reply.grounding_status = "grounded_mixed"
+            return reply, None
 
         if supporting_tests:
             citations: list[Citation | None] = []
             self._append_test_citations(citations, supporting_tests)
             return Reply(
-                text=plan.answer,
+                text="질문과 관련된 SCL 공개 검사 상세 페이지를 확인했습니다. 세부 내용은 아래 출처에서 확인해 주세요.",
                 citations=[citation for citation in citations if citation],
                 data_status="public_database",
+                grounding_status="grounded_internal",
+                answerability="partial",
+                claim_coverage=1.0,
+                missing_information=list(plan.missing_information),
             ), None
 
         if self._claimed_reference(plan):
             return Reply(
-                text="확인된 공개 데이터에서 해당 근거를 찾지 못했습니다. 검색 조건을 바꿔 다시 질문해 주세요.",
+                text=NO_SOURCE_TEXT,
                 data_status="no_source",
+                missing_information=list(plan.missing_information),
             ), None
 
         if plan.needs_clarification:
             return self._clarification_reply(plan, trusted_tests), None
 
-        return Reply(text=plan.answer, data_status="no_source"), None
+        return Reply(
+            text=NO_SOURCE_TEXT,
+            data_status="no_source",
+            missing_information=list(plan.missing_information),
+        ), None
+
+    def _matched_test(
+        self,
+        plan: ModelPlan,
+        trusted_tests: list[TestInfo] | None,
+    ) -> TestInfo | None:
+        if plan.domain != "test" or not (plan.matched_test_code or plan.matched_test_variant_key):
+            return None
+        if trusted_tests is None:
+            return self.catalog.get(plan.matched_test_code, plan.matched_test_variant_key)
+        for item in trusted_tests:
+            code_matches = not plan.matched_test_code or item.code == plan.matched_test_code
+            variant_matches = (
+                not plan.matched_test_variant_key
+                or item.variant_key == plan.matched_test_variant_key
+            )
+            if code_matches and variant_matches:
+                return item
+        return None
 
     def apply_document_fallback(
         self,
@@ -188,6 +213,8 @@ class GroundedReplyBuilder:
                     ref=ref,
                     url=item.source_url,
                     updated_at=item.updated_at,
+                    source_tier="internal_scl",
+                    claim_ids=["verified-test"],
                 )
             )
             existing_refs.add(ref)
@@ -241,7 +268,7 @@ class GroundedReplyBuilder:
 
         if (plan.candidate_test_codes or plan.candidate_test_variant_keys) and not candidates:
             return Reply(
-                text="확인된 검사 후보를 찾지 못했습니다. 검사명이나 검사코드를 다시 확인해 주세요.",
+                text=NO_SOURCE_TEXT,
                 data_status="no_source",
             )
         citations = [
@@ -250,6 +277,8 @@ class GroundedReplyBuilder:
                 ref=f"test:{item.variant_key or item.code}",
                 url=item.source_url,
                 updated_at=item.updated_at,
+                source_tier="internal_scl",
+                claim_ids=["verified-choice"],
             )
             for item in candidates[:4]
         ]
@@ -266,6 +295,9 @@ class GroundedReplyBuilder:
                 if candidates
                 else "no_source"
             ),
+            grounding_status="grounded_internal" if candidates else "abstained",
+            answerability="partial" if candidates else "none",
+            claim_coverage=1.0 if candidates else 0.0,
         )
 
     @staticmethod
@@ -298,7 +330,11 @@ class GroundedReplyBuilder:
             values = [f"{key}={value}" for key, value in top.metadata.items() if value]
             text = f"{top.title} 요보존제 안내: " + ", ".join(values)
         else:
-            text = f"{top.title}: {top.snippet or '상세 내용은 출처에서 확인해 주세요.'}"
+            text = (
+                f"관련 공개 문서를 찾았습니다. ‘{top.title}’에서 세부 내용을 확인해 주세요."
+                if top.entity_type in {"document", "attachment", "faq"}
+                else f"{top.title}: {top.snippet or '상세 내용은 출처에서 확인해 주세요.'}"
+            )
         citations = [cls.citation_from_hit(hit) for hit in hits[:3]]
         return Reply(
             text=text,
@@ -306,6 +342,9 @@ class GroundedReplyBuilder:
             data_status="public_document"
             if top.entity_type in {"document", "attachment", "faq"}
             else "public_database",
+            grounding_status="grounded_internal",
+            answerability="full",
+            claim_coverage=1.0,
         )
 
     @staticmethod
@@ -315,7 +354,14 @@ class GroundedReplyBuilder:
             url = f"https://www.scllab.co.kr/front/bbsList.do?bbsId={hit.metadata['board_id']}"
         if hit.source_url and not url:
             return None
-        return Citation(title=hit.title, ref=hit.ref, url=url, updated_at=hit.updated_at)
+        return Citation(
+            title=hit.title,
+            ref=hit.ref,
+            url=url,
+            updated_at=hit.updated_at,
+            source_tier="internal_scl",
+            claim_ids=["verified-public-record"],
+        )
 
     @staticmethod
     def test_reply(test: TestInfo, text: str) -> Reply:
@@ -329,7 +375,12 @@ class GroundedReplyBuilder:
                     ref=f"test:{test.variant_key or test.code}",
                     url=test.source_url,
                     updated_at=test.updated_at,
+                    source_tier="internal_scl",
+                    claim_ids=["verified-test"],
                 )
             ],
             data_status="demo_data" if test.demo else "public_database",
+            grounding_status="grounded_internal",
+            answerability="full",
+            claim_coverage=1.0,
         )

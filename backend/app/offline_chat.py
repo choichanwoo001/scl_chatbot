@@ -85,14 +85,18 @@ class OfflineChatResponder:
                     text="관련 검사 후보가 여러 개예요. 확인할 항목을 선택해 주세요.",
                     choices=[f"{item.name} · {item.specimen}" for item in results],
                     data_status="demo_data" if all(item.demo for item in results) else "public_database",
+                    grounding_status="grounded_internal",
+                    answerability="partial",
+                    claim_coverage=1.0,
                 ),
                 "test",
             )
         return OfflineReply(
             Reply(
-                kind="choices",
-                text="현재는 OpenAI API 키가 없어 제한된 데모 검색으로 동작합니다. 검사명이나 검체를 조금 더 구체적으로 알려주세요.",
-                choices=["HPV 검사", "갑상선 기능 검사", "소변 마약 검사"],
+                text=(
+                    "확인된 공개 자료에서 답변 근거를 찾지 못했습니다. "
+                    "검사명이나 검체를 조금 더 구체적으로 알려주세요."
+                ),
             ),
             "unsupported",
         )

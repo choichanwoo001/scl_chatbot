@@ -98,6 +98,17 @@ def _gateway(parsed: ModelPlan | None = None, *, vector_store_id: str | None = N
     return gateway
 
 
+def test_gateway_uses_configured_openai_compatible_proxy() -> None:
+    gateway = OpenAIGateway(
+        Settings(
+            openai_api_key="test-key",
+            openai_base_url="http://127.0.0.1:8787/v1",
+        )
+    )
+
+    assert str(gateway.client.base_url) == "http://127.0.0.1:8787/v1/"
+
+
 def test_responses_request_uses_structured_output_without_storage_or_file_search() -> None:
     gateway = _gateway(_plan())
 

@@ -1,4 +1,4 @@
-const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || "http://localhost:8000/api/chat";
+const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || new URL("/api/chat", window.location.origin).toString();
 const CHAT_HEALTH_URL = new URL("/health", CHAT_API_URL).toString();
 const API_BASE_URL = new URL("/api/", CHAT_API_URL);
 
@@ -37,7 +37,7 @@ export async function sendChatMessage({ message, sessionId }) {
     const response = await fetch(CHAT_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, session_id: sessionId, require_live: true }),
+      body: JSON.stringify({ message, session_id: sessionId, require_live: false }),
       signal: controller.signal,
     });
 

@@ -1,0 +1,13 @@
+{
+  "name": "scl-chat-project-tooling",
+  "private": true,
+  "scripts": {
+    "request-logger": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start_request_logger.ps1",
+    "request-logger:app": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start_request_logger.ps1 -App",
+    "backend:logged": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start_backend_logged.ps1"
+  },
+  "devDependencies": {
+    "@clack/prompts": "^1.7.0",
+    "tsx": "^4.19.4"
+  }
+}

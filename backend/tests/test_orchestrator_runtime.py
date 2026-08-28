@@ -188,7 +188,7 @@ def test_previous_turn_is_passed_to_the_next_structured_call() -> None:
     assert len(gateway.plan_calls) == 2
     second_history = gateway.plan_calls[1][1]
     assert second_history[-2]["content"] == "HPV 검사 알려줘"
-    assert second_history[-1]["content"] == "HPV 검사 정보입니다."
+    assert second_history[-1]["content"].startswith("확인된 SCL 공개 검사 항목")
 
 
 def test_test_followup_reuses_the_exact_variant_from_session_state() -> None:

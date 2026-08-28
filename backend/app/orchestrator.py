@@ -10,6 +10,8 @@ from .catalog import catalog
 from .chat_grounding import GroundedReplyBuilder
 from .chat_policy import ChatPolicy
 from .config import Settings
+from .external_search import OpenAIWebSearchProvider
+from .gemini_gateway import GeminiGateway
 from .guardrails import InputInspection, inspect_input
 from .offline_chat import OfflineChatResponder
 from .openai_gateway import ModelPlan, ModeratedContent, OpenAIGateway, RetrievalContext
@@ -56,10 +58,18 @@ class ChatOrchestrator:
         self.settings = settings
         self.public_search = search
         self.sessions = SessionStore(settings.session_history_limit)
-        self.gateway = OpenAIGateway(settings, search) if settings.openai_api_key else None
+        if settings.llm_provider == "gemini" and settings.gemini_api_key:
+            self.gateway = GeminiGateway(settings, search)
+        else:
+            self.gateway = OpenAIGateway(settings, search) if settings.openai_api_key else None
         self.policy = ChatPolicy()
         self.reply_builder = GroundedReplyBuilder(catalog, search)
         self.offline_responder = OfflineChatResponder(catalog, search, self.reply_builder)
+        self.external_search = (
+            OpenAIWebSearchProvider(settings)
+            if settings.external_web_search_configured
+            else None
+        )
 
     def end_session(self, session_id: str) -> bool:
         return self.sessions.delete(session_id)
@@ -152,7 +162,7 @@ class ChatOrchestrator:
             except Exception as error:
                 if require_live:
                     raise LiveChatUnavailable(
-                        "실시간 OpenAI 응답을 받지 못했습니다. 준비된 답변으로 대체하지 않았습니다. 잠시 후 다시 시도해 주세요."
+                        "실시간 AI 응답을 받지 못했습니다. 준비된 답변으로 대체하지 않았습니다. 잠시 후 다시 시도해 주세요."
                     ) from error
                 reply, domain = self._demo_reply(inspection.model_input, state)
                 reply.text = "현재 AI 연결이 지연되어 데모 검색으로 안내합니다. " + reply.text
@@ -193,6 +203,16 @@ class ChatOrchestrator:
             grounding_started = time.perf_counter()
             trusted_hits = retrieval.hits_by_ref if retrieval else None
             trusted_tests = list(retrieval.test_candidates) if retrieval else None
+            if (
+                trusted_tests is not None
+                and self.policy.is_test_followup(inspection.model_input)
+                and state.last_test_code
+            ):
+                previous_test = catalog.get(state.last_test_code, state.last_test_variant_key)
+                if previous_test and all(
+                    item.variant_key != previous_test.variant_key for item in trusted_tests
+                ):
+                    trusted_tests.append(previous_test)
             self.reply_builder.apply_document_fallback(
                 plan,
                 inspection.model_input,
@@ -203,6 +223,28 @@ class ChatOrchestrator:
                 trusted_hits=trusted_hits,
                 trusted_tests=trusted_tests,
             )
+            if (
+                self.external_search is not None
+                and reply.answerability == "none"
+                and reply.kind == "text"
+                and not flags.requires_authentication
+                and not flags.needs_handoff
+            ):
+                external_started = time.perf_counter()
+                try:
+                    external_reply = await asyncio.to_thread(
+                        self.external_search.search,
+                        inspection.model_input,
+                        plan.domain,
+                    )
+                except Exception:
+                    external_reply = None
+                timings["external_search"] = round(
+                    (time.perf_counter() - external_started) * 1000,
+                    1,
+                )
+                if external_reply is not None:
+                    reply = external_reply
             timings["grounding"] = round((time.perf_counter() - grounding_started) * 1000, 1)
             if matched:
                 state.last_test_code = matched.code
@@ -228,7 +270,7 @@ class ChatOrchestrator:
             return response
         if require_live:
             raise LiveChatUnavailable(
-                "OpenAI API가 연결되지 않아 실시간 답변을 생성할 수 없습니다. 준비된 답변으로 대체하지 않았습니다."
+                "AI API가 연결되지 않아 실시간 답변을 생성할 수 없습니다. 준비된 답변으로 대체하지 않았습니다."
             )
 
         reply, domain = self._demo_reply(inspection.model_input, state)

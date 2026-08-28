@@ -2,6 +2,31 @@ import { ExternalLink } from "lucide-react";
 import { HandoffForm, ResultAuthForm } from "./ChatForms.jsx";
 import { parseStructuredText } from "./structuredText.js";
 
+const SOURCE_LABELS = {
+  internal_scl: "SCL 공개 자료",
+  scl_live_web: "SCL 실시간 웹",
+  approved_external: "도메인 제한 외부 자료",
+};
+
+function sourceHostname(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function GroundingStatus({ message }) {
+  if (message.error || message.role !== "assistant") return null;
+  if (message.grounding_status === "grounded_external") {
+    return <p className="grounding-note is-external">외부 공개 자료를 참고했습니다. 아래 근거자료 원문을 직접 확인해 판단해 주세요.</p>;
+  }
+  if (message.grounding_status === "abstained" && message.answerability === "none") {
+    return <p className="grounding-note is-abstained">확인 가능한 근거 없음 · 추측 답변 차단</p>;
+  }
+  return null;
+}
+
 function InlineText({ children }) {
   return String(children).split(/(\*\*[^*]+\*\*|`[^`]+`)/g).filter(Boolean).map((part, index) => {
     if (part.startsWith("**") && part.endsWith("**")) {
@@ -60,11 +85,16 @@ function TextReply({ message }) {
       {message.role === "assistant"
         ? <StructuredText text={message.text} emphasizeFirst={message.liveGenerated && !message.error} />
         : <p>{message.text}</p>}
+      <GroundingStatus message={message} />
       {message.citations?.length ? (
         <div className="citation-list">
+          {message.grounding_status === "grounded_external" ? <p className="citation-heading">근거자료 직접 확인</p> : null}
           {message.citations.map((citation) => citation.url ? (
             <a key={`${citation.title}-${citation.url}`} href={citation.url} target="_blank" rel="noreferrer">
-              {citation.title} <ExternalLink size={12} />
+              <span>{SOURCE_LABELS[citation.source_tier] || "출처"}</span>
+              <strong>{citation.title}</strong>
+              {sourceHostname(citation.url) ? <small>{sourceHostname(citation.url)}</small> : null}
+              <ExternalLink size={12} />
             </a>
           ) : <span key={citation.title}>{citation.title}</span>)}
         </div>

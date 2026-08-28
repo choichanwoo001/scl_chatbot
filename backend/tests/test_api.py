@@ -12,7 +12,7 @@ def test_health_reports_backend_mode() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
-    assert body["mode"] in {"openai", "demo_fallback"}
+    assert body["mode"] in {"openai", "gemini", "demo_fallback"}
     assert body["rag_enabled"] == body["vector_search_configured"]
     assert isinstance(body["vector_index_completed"], int)
     assert isinstance(body["vector_index_items_with_errors"], int)

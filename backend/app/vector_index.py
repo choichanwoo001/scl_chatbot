@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 from collections.abc import Iterable
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from openai import OpenAI
@@ -237,6 +239,7 @@ class OpenAIVectorIndexService:
         self.settings = app_settings
         self.client = client or OpenAI(
             api_key=app_settings.openai_api_key,
+            base_url=app_settings.openai_base_url,
             timeout=max(app_settings.vector_search_timeout_seconds, 30),
             max_retries=2,
         )
@@ -485,9 +488,39 @@ class OpenAIVectorIndexService:
             yield items[index:index + size]
 
 
-def vector_index_status(vector_store_id: str | None = None) -> dict[str, Any]:
+def vector_index_status(
+    vector_store_id: str | None = None,
+    app_settings: Settings = settings,
+) -> dict[str, Any]:
+    if app_settings.llm_provider == "gemini":
+        path = Path(app_settings.gemini_vector_index_path)
+        if not path.is_file():
+            return {
+                "configured": False,
+                "vector_store_id": None,
+                "counts": {},
+                "completed_by_type": {},
+                "usage_bytes": 0,
+                "items_with_errors": 0,
+                "last_indexed_at": None,
+            }
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        items = list(payload.get("items") or [])
+        by_type: dict[str, int] = {}
+        for item in items:
+            entity_type = str(item.get("entity_type") or "unknown")
+            by_type[entity_type] = by_type.get(entity_type, 0) + 1
+        return {
+            "configured": app_settings.vector_search_configured,
+            "vector_store_id": f"local:{path.name}",
+            "counts": {"completed": len(items)},
+            "completed_by_type": by_type,
+            "usage_bytes": path.stat().st_size,
+            "items_with_errors": 0,
+            "last_indexed_at": payload.get("created_at"),
+        }
     init_database()
-    target = vector_store_id or settings.openai_vector_store_id
+    target = vector_store_id or app_settings.openai_vector_store_id
     if not target:
         return {
             "configured": False,

@@ -204,6 +204,44 @@ def test_rejects_model_authored_citation_without_database_reference() -> None:
     assert matched is None
     assert reply.citations == []
     assert reply.data_status == "no_source"
+    assert "모델이 만든 공지" not in reply.text
+
+
+def test_rejects_existing_test_that_was_not_in_the_retrieved_candidates() -> None:
+    plan = ModelPlan(
+        domain="test",
+        sub_intent="get_test_detail",
+        requested_action="explain",
+        answer="존재하지만 질문과 무관한 검사입니다.",
+        matched_test_code="DEMO-C5621",
+    )
+
+    reply, matched = make_orchestrator()._reply_from_plan(
+        plan,
+        trusted_hits={},
+        trusted_tests=[],
+    )
+
+    assert matched is None
+    assert reply.answerability == "none"
+    assert "질문과 무관한" not in reply.text
+
+
+def test_verified_document_uses_server_text_instead_of_model_claim() -> None:
+    document_id, _ = _seed_routing_public_data()
+    plan = ModelPlan(
+        domain="document",
+        sub_intent="search_schedule_notice",
+        requested_action="search",
+        answer="문서에 없는 휴무일은 99일입니다.",
+        matched_document_ids=[f"document:{document_id}"],
+    )
+
+    reply, _ = make_orchestrator()._reply_from_plan(plan)
+
+    assert reply.grounding_status == "grounded_internal"
+    assert "99일" not in reply.text
+    assert "관련 공개 문서를 찾았습니다" in reply.text
 
 
 def test_rejects_unresolvable_model_database_reference_and_answer() -> None:

@@ -1,15 +1,15 @@
 # 운영·인수인계 가이드
 
-기준일: 2026-08-23
+기준일: 2026-08-28
 
 ## 1. 운영 프로필
 
-| 프로필 | OpenAI | Vector | 결과 Provider | 목적 |
-|---|---|---|---|---|
-| 자동 테스트 | 없음 | 꺼짐 | mock·unconfigured | 비용 없는 결정적 검증 |
-| 로컬 데모 | 선택 | 꺼짐 | unconfigured | UI·RDB 시연 |
-| 실시간 시연 | 필수 | 선택 | unconfigured | OpenAI + 공개 RDB |
-| 운영 후보 | 필수 | shadow 후 활성 | 승인된 HTTPS Gateway | 기관 승인 후 |
+| 프로필 | LLM | Vector | 저장소 | 결과 Provider | 목적 |
+|---|---|---|---|---|---|
+| 자동 테스트 | 없음 | 꺼짐 | 인메모리·임시 DB | mock·unconfigured | 비용 없는 결정적 검증 |
+| 로컬 데모 | Gemini 또는 OpenAI 선택 | 선택 | SQLite·메모리 세션 | unconfigured | UI·RDB 시연 |
+| 공개 Sites | Gemini 우선, 검색 fallback | Gemini 로컬 Index | D1 세션·상담·일일 호출량 | unconfigured | 제한된 공개 시연 |
+| 운영 후보 | 승인 provider | 품질 평가 후 활성 | PostgreSQL·공유 세션 | 승인된 HTTPS Gateway | 기관 승인 후 |
 
 `mock` 결과 Provider는 자동 테스트 전용이며 공개 시연·운영에 사용하지 않는다.
 
@@ -19,15 +19,18 @@
 
 | 설정 | 필수 시점 | 설명 |
 |---|---|---|
-| `OPENAI_API_KEY` | 실시간 채팅 | 백엔드 전용 |
-| `OPENAI_CHAT_MODEL` | 실시간 채팅 | 기본 `gpt-5.6-luna` |
-| `OPENAI_REASONING_EFFORT` | 실시간 채팅 | 기본 `low`; 지연 민감형 분류·근거 선택 |
-| `OPENAI_MAX_RETRIES` | 실시간 채팅 | 기본 `0`; 브라우저 35초 제한 안에서 실패 반환 |
+| `LLM_PROVIDER` | FastAPI provider 선택 | `gemini` 또는 `openai` |
+| `GEMINI_API_KEY` | Gemini 실시간 채팅·임베딩 | 서버 전용 |
+| `GEMINI_MODEL` | Gemini 실시간 채팅 | 기본 `gemini-3.1-flash-lite` |
+| `GEMINI_DAILY_REQUEST_LIMIT` | Sites 배포 | D1로 관리하는 일일 호출 상한, 기본 `20` |
+| `OPENAI_API_KEY` | OpenAI 채팅·선택적 외부 검색 | 서버 전용 |
+| `OPENAI_CHAT_MODEL` | OpenAI provider | 기본 `gpt-5.6-luna` |
 | `DATABASE_URL` | 외부 DB 사용 | 기본 SQLite |
 | `FIELD_ENCRYPTION_KEY` | 운영 상담 접수 | 고정 Fernet 키 |
 | `ALLOWED_ORIGINS` | 배포 | 실제 프런트 도메인 |
-| `OPENAI_VECTOR_STORE_ID` | Vector 전환 | 승인된 Store ID |
-| `VECTOR_SEARCH_ENABLED` | Vector 전환 | 기본 `false` |
+| `GEMINI_VECTOR_INDEX_PATH` | Gemini Vector | 기본 `data/gemini_vector_index.json` |
+| `OPENAI_VECTOR_STORE_ID` | OpenAI Vector | 승인된 Store ID |
+| `VECTOR_SEARCH_ENABLED` | Vector 전환 | `.env.example`은 `true`, 미설정 코드 기본값은 `false` |
 | `RESULT_API_*` | 개인 결과 연동 | Gateway·mTLS 설정 |
 | `SEED_DEMO_ON_EMPTY` | 개발·단위 테스트만 | 운영 기본 `false` |
 
@@ -61,6 +64,12 @@ npm ci
 npm run dev -- --host 127.0.0.1
 ```
 
+### Sites Worker
+
+`frontend/.openai/hosting.json`의 D1 binding `DB`와 서버 Secret을 설정한 뒤 호스팅 빌드를
+배포한다. Worker 시작 시 세션·상담·Gemini 일일 호출량 테이블을 생성한다. 공개 UI는
+`require_live=false`를 보내므로 Gemini 실패 시 검증된 배포 스냅샷 검색으로 복귀한다.
+
 ## 4. 배포 후 확인
 
 ```powershell
@@ -93,7 +102,20 @@ $env:PYTHONPATH="backend"
 부분 수집은 기존 항목을 비활성화하지 않는다. 전체 동기화와 무결성·검색 평가가 모두 성공한
 뒤에만 새 데이터 스냅샷을 승인한다.
 
-## 6. Vector Store 전환
+## 6. Vector 전환
+
+### Gemini 로컬 인덱스
+
+```powershell
+$env:PYTHONPATH="backend"
+.venv\Scripts\python scripts\build_gemini_vector_index.py
+.venv\Scripts\python scripts\evaluate_public_search.py
+```
+
+생성된 `data/gemini_vector_index.json`의 모델·차원·건수와 공개 ref를 확인한 뒤 배포
+스냅샷을 갱신한다. 인덱스 또는 Gemini API가 실패하면 키워드 검색을 유지한다.
+
+### OpenAI Vector Store 선택 경로
 
 외부 저장소 생성과 업로드는 비용·외부 상태 변경이므로 승인된 운영자가 실행한다.
 
@@ -147,8 +169,8 @@ PostgreSQL 전환 시 기관 표준 백업·PITR 정책으로 대체한다.
 
 | 증상 | 즉시 조치 | 후속 확인 |
 |---|---|---|
-| OpenAI 5xx·timeout | 실시간 UI에 503 유지 | 모델 상태·네트워크·키 |
-| Vector 오류 증가 | Vector 비활성화 | Store 상태·매핑·커버리지 |
+| Gemini/OpenAI 5xx·timeout | 공개 UI는 검색 fallback, `require_live=true`는 503 | 모델 상태·호출량·네트워크·키 |
+| Vector 오류 증가 | Vector 비활성화 | 로컬 Index 또는 Store 상태·매핑·커버리지 |
 | 검색 품질 저하 | 직전 데이터 snapshot 사용 | 동기화 revision·평가셋 |
 | OCR 실패 증가 | 재시도 중단·원본 보존 | Tesseract 언어·용량·페이지 |
 | 결과 Gateway 오류 | 결과 기능만 중단 | HTTPS·mTLS·계약 응답 |

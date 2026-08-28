@@ -19,6 +19,12 @@ class ModelCitation(BaseModel):
     updated_at: str | None = None
 
 
+class ModelClaim(BaseModel):
+    id: str
+    text: str
+    evidence_refs: list[str] = Field(default_factory=list)
+
+
 Domain = Literal[
     "test",
     "result",
@@ -192,6 +198,9 @@ class ModelPlan(BaseModel):
     choices: list[str] = Field(default_factory=list)
     requested_fields: list[str] = Field(default_factory=list)
     citations: list[ModelCitation] = Field(default_factory=list)
+    claims: list[ModelClaim] = Field(default_factory=list)
+    answerability: Literal["full", "partial", "none"] = "none"
+    missing_information: list[str] = Field(default_factory=list)
     requires_authentication: bool = False
     needs_handoff: bool = False
     medical_review_required: bool = False
@@ -221,6 +230,9 @@ SYSTEM_INSTRUCTIONS = """
 - 로그인이나 본인 확인이 필요한 경우 requires_authentication=true로 표시한다.
 - 개인 검사결과 해석이나 의료적 판단이 필요한 경우 medical_review_required=true와 needs_handoff=true로 표시한다.
 - 제공된 검사 후보와 검색된 SCL 공개 문서만 사실 근거로 사용한다.
+- answer에 포함하려는 사실은 claims에 원자적인 문장으로 나누고, 각 claim의 evidence_refs에는 제공된 후보 ref만 넣는다.
+- 근거가 없는 사실 claim은 만들지 않는다. 핵심 답을 뒷받침할 근거가 없으면 answerability=none으로 표시한다.
+- 일부만 확인되면 answerability=partial로 표시하고 확인하지 못한 항목을 missing_information에 넣는다.
 - 검사 후보의 public_details는 해당 검사 상세 페이지에서 공개된 채취 주의사항·참고치·임상적 의의 등이다. 질문과 직접 관련된 값만 답변에 사용한다.
 - 답변에 public_details를 사용한 모든 검사 후보의 variant_key를 supporting_test_variant_keys에 넣는다.
 - 검사 후보와 공식 FAQ가 함께 검색되고 FAQ가 사용자 질문에 직접 답하면 FAQ 내용을 우선 반영하고, 검사 카드는 보조 정보로 사용한다.
@@ -274,6 +286,7 @@ class OpenAIGateway:
         self.public_search = search
         self.client = OpenAI(
             api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url,
             timeout=settings.request_timeout_seconds,
             max_retries=settings.openai_max_retries,
         )
