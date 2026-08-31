@@ -11,6 +11,7 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - The prototype is desktop-only. The chatbot is a fixed-width 432px right-side overlay with a desktop viewport-height guard; do not add mobile menus, bottom sheets, or small-screen responsive layouts.
 - The prototype must keep a small label explaining that it is a demonstration and must not be presented as the live SCL service.
 - Chatbot answers should prioritize scanability: lead with a direct summary, then use short section headings, compact lists or label/value rows, and visually distinct caution notes. Preserve concise one-sentence replies without unnecessary decoration.
+- Improve dense answer readability through paragraph grouping, section labels, spacing, and contrast before considering any font-size changes; preserve the established chatbot type scale unless the user explicitly requests resizing.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 

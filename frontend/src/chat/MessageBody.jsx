@@ -79,6 +79,51 @@ function StructuredText({ text, emphasizeFirst = false }) {
   );
 }
 
+function splitSentences(text) {
+  const paragraphs = String(text).split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
+  if (paragraphs.length > 1) return paragraphs;
+
+  const sentences = String(text).match(/[^.!?。！？]+[.!?。！？]?/g)
+    ?.map((sentence) => sentence.trim())
+    .filter(Boolean);
+  return sentences?.length ? sentences : [String(text)];
+}
+
+function TestDescription({ text, testName }) {
+  const sentences = splitSentences(text);
+  const emphasizedTerm = testName?.replace(/^\([^)]*\)\s*/, "").trim();
+  const guidanceIndex = sentences.findIndex((sentence, index) => (
+    index > 0 && /(결과 확인|상담|문의|의뢰|폼)/.test(sentence)
+  ));
+  const summary = guidanceIndex > 0 ? sentences.slice(0, guidanceIndex) : sentences;
+  const guidance = guidanceIndex > 0 ? sentences.slice(guidanceIndex) : [];
+
+  const renderText = (sentence) => {
+    if (!emphasizedTerm || !sentence.includes(emphasizedTerm)) return sentence;
+    return sentence.split(emphasizedTerm).map((part, index) => (
+      index === 0
+        ? part
+        : <span key={`${part}-${index}`}><strong className="test-term">{emphasizedTerm}</strong>{part}</span>
+    ));
+  };
+
+  return (
+    <div className="test-description">
+      <div className="test-description-summary">
+        {summary.map((sentence, index) => <p key={`${sentence}-${index}`}>{renderText(sentence)}</p>)}
+      </div>
+      {guidance.length ? (
+        <aside className="test-description-guidance">
+          <strong>결과 확인 안내</strong>
+          <p>{guidance.map((sentence, index) => (
+            <span key={`${sentence}-${index}`}>{index > 0 ? " " : ""}{renderText(sentence)}</span>
+          ))}</p>
+        </aside>
+      ) : null}
+    </div>
+  );
+}
+
 function TextReply({ message }) {
   return (
     <div>
@@ -106,7 +151,7 @@ function TextReply({ message }) {
 function TestReply({ message }) {
   return (
     <div className="test-result-card">
-      <StructuredText text={message.text} />
+      <TestDescription text={message.text} testName={message.test.name} />
       <div className="test-card-heading"><span>검사코드 {message.test.code}</span><strong>{message.test.name}</strong></div>
       <dl>
         <div><dt>검체/용기</dt><dd>{message.test.specimen}{message.test.container ? ` / ${message.test.container}` : ""}</dd></div>

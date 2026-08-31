@@ -140,16 +140,22 @@ a { color: inherit; text-decoration: none; }
 .quick-questions button, .choice-list button { border: 1px solid #bad0e7; border-radius: 999px; background: #fff; color: #295f97; padding: 8px 10px; font-size: 11px; text-align: left; }
 .choice-list { display: grid; gap: 6px; margin-top: 10px; }
 .choice-list button { border-radius: 8px; }
-.test-result-card > .structured-answer { margin-bottom: 10px; }
-.test-card-heading { display: flex; flex-direction: column; gap: 2px; padding: 10px; background: #eef5fc; border-radius: 9px; }
+.test-description { display: grid; gap: 10px; margin-bottom: 12px; color: #273b52; }
+.test-description-summary { display: grid; gap: 7px; }
+.test-description-summary p { line-height: 1.68; }
+.test-term { color: #184f85; font-weight: 700; }
+.test-description-guidance { display: grid; gap: 4px; padding: 8px 10px; border-left: 3px solid #73a3d0; border-radius: 0 8px 8px 0; background: #f5f8fc; color: #415a73; }
+.test-description-guidance > strong { color: #2d6397; font-weight: 700; }
+.test-description-guidance p { line-height: 1.58; }
+.test-card-heading { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid #dce8f4; background: #eef5fc; border-radius: 9px; }
 .test-card-heading span { color: #54708d; font-size: 10px; }
 .test-card-heading strong { color: #1d4f84; font-size: 14px; }
-.test-result-card dl { margin: 8px 0; }
-.test-result-card dl div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 5px 1px; border-bottom: 1px solid #edf0f4; }
-.test-result-card dt { color: #6b7889; font-size: 11px; }
+.test-result-card dl { margin: 8px 0 9px; border-top: 1px solid #e2e9f0; }
+.test-result-card dl div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 6px 1px; border-bottom: 1px solid #e2e9f0; }
+.test-result-card dt { color: #566b82; font-size: 11px; font-weight: 600; }
 .test-result-card dd { margin: 0; font-weight: 600; font-size: 11px; }
 .source-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 0; border: 0; background: transparent; color: #245f9f; font-size: 11px; font-weight: 600; }
-.test-result-card .source-note { margin-top: 7px; color: #8994a3; font-size: 9px; }
+.test-result-card .source-note { margin-top: 8px; padding-top: 7px; border-top: 1px solid #edf0f4; color: #6f7e8e; font-size: 9px; }
 .citation-list { display: grid; gap: 4px; margin-top: 8px; padding-top: 7px; border-top: 1px solid #edf0f4; }
 .citation-list a, .citation-list span { display: inline-flex; align-items: center; gap: 4px; color: #245f9f; font-size: 10px; }
 .citation-list a > span { padding: 2px 5px; border-radius: 999px; background: #eaf2fb; color: #466985; font-size: 8px; font-weight: 700; }
