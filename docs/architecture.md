@@ -62,6 +62,7 @@ flowchart LR
 
 - 기본 개발 DB: `data/scl_catalog.db` SQLite
 - 운영 대체 가능 DB: `DATABASE_URL`로 PostgreSQL 지정 가능
+- Sites Worker 공개 검색: `SUPABASE_URL`과 `SUPABASE_PUBLISHABLE_KEY`가 있으면 Supabase HTTPS RPC를 사용하고, 연결 실패 시 배포 시점의 공개 스냅샷으로 전환
 - 공개 원문·추출문: RDB와 로컬 첨부 디렉터리
 - 상담 요청: Fernet 암호화 컬럼
 - 채팅 세션: 호스팅 D1 또는 FastAPI 메모리, 브라우저 탭의 안전한 UI 상태만 `sessionStorage`

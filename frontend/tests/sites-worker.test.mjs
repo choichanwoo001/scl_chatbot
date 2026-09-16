@@ -3,6 +3,7 @@ import { access } from "node:fs/promises";
 import test from "node:test";
 import worker from "../worker/index.js";
 import { catalog, publicItems } from "../worker/catalog-data.js";
+import { clearSupabaseCatalogCache } from "../worker/supabase-catalog.js";
 
 function createDatabase() {
   const sessions = new Map();
@@ -135,6 +136,62 @@ test("answers catalog questions and keeps the existing response contract", async
   assert.equal(body.reply.kind, "test");
   assert.equal(body.reply.test.code, target.code);
   assert.ok(database.sessions.has(body.session_id));
+});
+
+test("uses the live Supabase catalog when the Worker credentials are configured", async () => {
+  const originalFetch = globalThis.fetch;
+  const liveTest = {
+    code: "LIVE-001", variant_key: "live-row", name: "Supabase 실시간 검사", aliases: [],
+    specimen: "혈청", container: "SST", method: "PCR", schedule: "월-금", tat: "1일",
+    source_title: "SCL 검사항목조회", source_url: "https://www.scllab.co.kr/test/live",
+    updated_at: "2026-09-16", demo: false, public_details: {}, score: 1000,
+  };
+  clearSupabaseCatalogCache();
+  globalThis.fetch = async (url, options) => {
+    assert.equal(String(url), "https://project.supabase.co/rest/v1/rpc/scl_search_catalog");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers.apikey, "publishable-key");
+    assert.deepEqual(JSON.parse(options.body), { p_query: "LIVE-001", p_test_limit: 8, p_public_limit: 6 });
+    return Response.json({ tests: [liveTest], public_items: [] });
+  };
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "LIVE-001", require_live: false }),
+    }), { DB: database, SUPABASE_URL: "https://project.supabase.co", SUPABASE_PUBLISHABLE_KEY: "publishable-key" });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.catalog_source, "supabase");
+    assert.equal(body.reply.kind, "test");
+    assert.equal(body.reply.test.code, "LIVE-001");
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSupabaseCatalogCache();
+  }
+});
+
+test("falls back to the packaged snapshot when Supabase is temporarily unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  const target = catalog[0];
+  clearSupabaseCatalogCache();
+  globalThis.fetch = async () => new Response("unavailable", { status: 503 });
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: target.code, require_live: false }),
+    }), { DB: database, SUPABASE_URL: "https://project.supabase.co", SUPABASE_PUBLISHABLE_KEY: "publishable-key" });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.catalog_source, "snapshot");
+    assert.equal(body.reply.test.code, target.code);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSupabaseCatalogCache();
+  }
 });
 
 test("uses Gemini structured generation while preserving the response contract", async () => {

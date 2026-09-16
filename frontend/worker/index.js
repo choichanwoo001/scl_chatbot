@@ -1,6 +1,7 @@
 import { ensureDatabase, readSession, saveSession } from "./session-store.js";
 import { relayBackend } from "./backend-proxy.js";
 import { catalog, publicItems } from "./catalog-data.js";
+import { hasSupabaseCatalog, readSupabaseCatalogStatus, searchSupabaseCatalog } from "./supabase-catalog.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 const INQUIRY_TYPES = new Set(["test_request", "specimen_shipping", "result_issue", "complaint", "business", "general"]);
@@ -483,8 +484,19 @@ async function handleChat(request, env) {
   }
   let lastTest = null;
   try { lastTest = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
-  const tests = rankTests(inspection.modelInput);
+  let tests = rankTests(inspection.modelInput);
   let publicHits = rankPublic(inspection.modelInput);
+  let catalogSource = "snapshot";
+  try {
+    const remote = await searchSupabaseCatalog(env, inspection.modelInput);
+    if (remote) {
+      tests = remote.tests;
+      publicHits = remote.publicItems;
+      catalogSource = remote.source;
+    }
+  } catch (error) {
+    console.error("Supabase catalog search failed; using snapshot", error);
+  }
   let reply;
   let domain;
   let mode = "demo_fallback";
@@ -494,7 +506,7 @@ async function handleChat(request, env) {
   if (env.GEMINI_API_KEY && !RESULT_INTENT.test(inspection.modelInput) && !HANDOFF_INTENT.test(inspection.modelInput)) {
     try {
       try {
-        publicHits = await rankPublicWithVectors(env, inspection.modelInput, publicHits);
+        if (catalogSource === "snapshot") publicHits = await rankPublicWithVectors(env, inspection.modelInput, publicHits);
       } catch (error) {
         console.error("Gemini vector search failed", error);
       }
@@ -548,6 +560,7 @@ async function handleChat(request, env) {
     needs_handoff: needsHandoff,
     medical_review_required: Boolean(plan?.medical_review_required),
     response_id: responseId,
+    catalog_source: catalogSource,
     timings_ms: { total: Date.now() - started },
   });
 }
@@ -623,11 +636,18 @@ async function handleApi(request, env, url) {
       vector_index_last_synced_at: null,
       external_web_search_enabled: enabled(env.EXTERNAL_WEB_SEARCH_ENABLED),
       external_web_search_configured: enabled(env.EXTERNAL_WEB_SEARCH_ENABLED) && Boolean(env.OPENAI_API_KEY),
+      catalog_source: hasSupabaseCatalog(env) ? "supabase" : "snapshot",
     });
   }
   if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env);
   if (url.pathname === "/api/handoff" && request.method === "POST") return handleHandoff(request, env);
   if (url.pathname === "/api/catalog/status" && request.method === "GET") {
+    try {
+      const remote = await readSupabaseCatalogStatus(env);
+      if (remote) return json(remote);
+    } catch (error) {
+      console.error("Supabase catalog status failed; using snapshot", error);
+    }
     return json({ source: "SCL_PUBLIC_SNAPSHOT", tests: new Set(catalog.map((item) => item.code)).size, variants: catalog.length, details: catalog.filter((item) => Object.keys(item.public_details).length).length });
   }
   if (url.pathname === "/api/public-data/status" && request.method === "GET") {

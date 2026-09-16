@@ -26,6 +26,8 @@
 | `OPENAI_API_KEY` | OpenAI 채팅·선택적 외부 검색 | 서버 전용 |
 | `OPENAI_CHAT_MODEL` | OpenAI provider | 기본 `gpt-5.6-luna` |
 | `DATABASE_URL` | 외부 DB 사용 | 기본 SQLite |
+| `SUPABASE_URL` | Sites Worker의 실시간 공개 카탈로그 조회 | 미설정 시 내장 스냅샷 |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase 공개 RPC 호출 | 미설정 시 내장 스냅샷 |
 | `FIELD_ENCRYPTION_KEY` | 운영 상담 접수 | 고정 Fernet 키 |
 | `ALLOWED_ORIGINS` | 배포 | 실제 프런트 도메인 |
 | `GEMINI_VECTOR_INDEX_PATH` | Gemini Vector | 기본 `data/gemini_vector_index.json` |
