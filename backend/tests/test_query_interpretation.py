@@ -157,6 +157,7 @@ def test_identifier_boundaries_and_nfkc():
     assert code_candidates("급여코드 Ｄ５１７２０５ＫＺ로 검사") == {"D517205KZ"}
     assert not code_candidates("XD517205KZ D517205KZX 1162900")
     assert code_candidates("16290으로 검사") == {"16290"}
+    assert code_candidates("R0329와 8A088 검사") == {"R0329", "8A088"}
 
 
 def test_bare_code_does_not_trust_model_field_guess(db):

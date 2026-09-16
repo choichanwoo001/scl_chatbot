@@ -172,6 +172,91 @@ test("uses the live Supabase catalog when the Worker credentials are configured"
   }
 });
 
+test("uses exact SCL-code matches before keyword ranking", async () => {
+  const target = catalog[0];
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: `${target.code} 코드를 가진 검사가 있나?`, require_live: false }),
+  }), apiEnv);
+  const body = await response.json();
+
+  assert.equal(body.reply.kind, "test");
+  assert.equal(body.reply.test.code, target.code);
+});
+
+test("recognizes mixed-format five-character SCL codes", async () => {
+  const target = catalog.find((item) => item.code === "R0329");
+  assert.ok(target);
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "R0329로 검사 찾아줘", require_live: false }),
+  }), apiEnv);
+  const body = await response.json();
+
+  assert.equal(body.reply.kind, "test");
+  assert.equal(body.reply.test.code, "R0329");
+});
+
+test("unknown identifiers never fall through to unrelated keyword candidates", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "X999999ZZ 코드를 가진 검사가 있나?", require_live: false }),
+  }), apiEnv);
+  const body = await response.json();
+
+  assert.equal(body.reply.kind, "text");
+  assert.equal(body.reply.answerability, "none");
+  assert.equal(body.reply.test, null);
+  assert.deepEqual(body.reply.choices, []);
+});
+
+test("the packaged catalog resolves D185000HZ only to its ALT billing-code matches", async () => {
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: "D185000HZ 코드를 가진 검사가 있나?", require_live: false }),
+  }), apiEnv);
+  const body = await response.json();
+
+  assert.equal(body.reply.kind, "choices");
+  assert.equal(body.reply.choices.length, 2);
+  assert.ok(body.reply.choices.every((choice) => choice.includes("ALT")));
+  assert.ok(body.reply.choices.some((choice) => choice.includes("검사코드 10130")));
+  assert.ok(body.reply.choices.some((choice) => choice.includes("검사코드 10135")));
+  assert.ok(body.reply.choices.every((choice) => !choice.includes("40500")));
+});
+
+test("falls back from a missing SCL code to an exact billing-code match", async () => {
+  const originalFetch = globalThis.fetch;
+  const billingTest = {
+    code: "10130", variant_key: "10130:100", name: "ALT", aliases: [], specimen: "Serum",
+    container: null, method: "IFCC", schedule: "월~토", tat: "1일",
+    source_title: "SCL 검사항목조회", source_url: "https://www.scllab.co.kr/test/10130",
+    updated_at: "2026-09-16", demo: false, public_details: {}, billing_codes: ["D185000HZ"],
+    matched_code: "D185000HZ", matched_code_type: "billing", score: 900,
+  };
+  clearSupabaseCatalogCache();
+  globalThis.fetch = async () => Response.json({ tests: [billingTest], public_items: [], identifier_query: true });
+  try {
+    const response = await worker.fetch(new Request("https://example.test/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "D185000HZ 코드를 가진 검사가 있나?", require_live: false }),
+    }), { DB: database, SUPABASE_URL: "https://project.supabase.co", SUPABASE_PUBLISHABLE_KEY: "publishable-key" });
+    const body = await response.json();
+
+    assert.equal(body.reply.kind, "test");
+    assert.equal(body.reply.test.code, "10130");
+    assert.equal(body.reply.test.matched_code_type, "billing");
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearSupabaseCatalogCache();
+  }
+});
+
 test("falls back to the packaged snapshot when Supabase is temporarily unavailable", async () => {
   const originalFetch = globalThis.fetch;
   const target = catalog[0];
@@ -226,7 +311,7 @@ test("uses Gemini structured generation while preserving the response contract",
     const response = await worker.fetch(new Request("https://example.test/api/chat", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message: target.code, require_live: true }),
+      body: JSON.stringify({ message: target.name, require_live: true }),
     }), {
       DB: database,
       GEMINI_API_KEY: "test-key",

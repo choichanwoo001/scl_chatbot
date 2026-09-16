@@ -17,6 +17,7 @@ const MEDICAL_REVIEW_INTENT = /(진단|치료|복약|약물|정상|비정상|수
 const FOLLOWUP_INTENT = /(그거|그 검사|그 항목|해당 검사|앞의 검사).*(용기|검체|소요일|방법|언제|일정|며칠)/i;
 const SCL_OPERATIONAL_INTENT = /(scl|검사\s*코드|검체|용기|검사일|소요일|의뢰|공문|지점|센터|연락처|전화|주소|검사\s*결과|결과\s*조회)/i;
 const STOP_WORDS = new Set(["검사", "알려", "주세요", "궁금", "대한", "관련", "정보"]);
+const CODE_PATTERN = /(?<![A-Za-z0-9])(?:[A-Za-z]\d{6}[A-Za-z]{2}|[A-Za-z]\d{4}|\d[A-Za-z]\d{3}|\d{5})(?![A-Za-z0-9])/gi;
 const DEFAULT_EXTERNAL_DOMAINS = [
   "scllab.co.kr", "kdca.go.kr", "mfds.go.kr", "hira.or.kr",
   "pubmed.ncbi.nlm.nih.gov", "clinicaltrials.gov", "who.int", "cdc.gov", "fda.gov",
@@ -98,7 +99,38 @@ function termsFor(query) {
   return normalize(query).split(" ").filter((term) => term.length > 1 && !STOP_WORDS.has(term));
 }
 
+function codeCandidates(query) {
+  return [...new Set((String(query || "").normalize("NFKC").match(CODE_PATTERN) || []).map((code) => code.toUpperCase()))];
+}
+
+function normalizedBillingCodes(item) {
+  return (Array.isArray(item.billing_codes) ? item.billing_codes : [])
+    .map((code) => String(code).replace(/etc$/i, "").toUpperCase());
+}
+
+function exactCodeMatches(query, items = catalog) {
+  const codes = codeCandidates(query);
+  if (!codes.length) return null;
+  const resolved = new Map();
+  for (const code of codes) {
+    const sclMatches = items.filter((item) => String(item.code || "").toUpperCase() === code);
+    const matches = sclMatches.length
+      ? sclMatches.map((item) => ({ item, matchedCode: code, matchedCodeType: "scl" }))
+      : items
+        .filter((item) => normalizedBillingCodes(item).includes(code))
+        .map((item) => ({ item, matchedCode: code, matchedCodeType: "billing" }));
+    for (const match of matches) resolved.set(match.item.variant_key, match);
+  }
+  return [...resolved.values()].map(({ item, matchedCode, matchedCodeType }) => ({
+    item: { ...item, matched_code: matchedCode, matched_code_type: matchedCodeType },
+    score: matchedCodeType === "scl" ? 1000 : 900,
+    lexicalScore: matchedCodeType === "scl" ? 1000 : 900,
+  }));
+}
+
 function rankTests(query, limit = 8) {
+  const exactMatches = exactCodeMatches(query);
+  if (exactMatches) return exactMatches.slice(0, limit);
   const normalized = normalize(query);
   const terms = termsFor(query);
   if (!normalized) return [];
@@ -207,11 +239,18 @@ function publicTest(item) {
   return test;
 }
 
+function testChoice(item) {
+  return `${item.name} · ${item.specimen} · 검사코드 ${item.code}`;
+}
+
 function testReply(item, text = "확인된 SCL 공개 검사 항목입니다. 검사 조건은 아래 공개 데이터 카드에서 확인해 주세요.") {
   const test = publicTest(item);
+  const resolvedText = test.matched_code_type === "billing" && test.matched_code
+    ? `급여코드 ${test.matched_code}에 정확히 일치하는 SCL 공개 검사 항목입니다. 검사 조건은 아래 공개 데이터 카드에서 확인해 주세요.`
+    : text;
   return {
     kind: "test",
-    text,
+    text: resolvedText,
     test,
     choices: [],
     citations: [{ title: test.source_title, ref: `test:${test.variant_key || test.code}`, url: safeUrl(test.source_url), updated_at: test.updated_at, source_tier: "internal_scl", claim_ids: ["verified-test"] }],
@@ -397,7 +436,7 @@ function resolvePlan(plan, tests, publicHits, query) {
       kind: "choices",
       text: "관련 검사 후보가 여러 개예요. 확인할 항목을 선택해 주세요.",
       test: null,
-      choices: tests.slice(0, 4).map(({ item }) => `${item.name} · ${item.specimen}`),
+      choices: tests.slice(0, 4).map(({ item }) => testChoice(item)),
       citations: [],
       data_status: "public_database",
       grounding_status: "grounded_internal",
@@ -419,6 +458,26 @@ function deterministicReply(query, lastTest, tests, publicHits) {
   if (FOLLOWUP_INTENT.test(query) && lastTest) {
     return { domain: "test", reply: testReply(lastTest, "앞에서 확인한 검사의 정보를 다시 정리했어요.") };
   }
+  if (codeCandidates(query).length) {
+    if (tests.length === 1) {
+      return { domain: "test", reply: testReply(tests[0].item) };
+    }
+    if (tests.length > 1) {
+      return { domain: "test", reply: {
+        kind: "choices",
+        text: "코드에 정확히 일치하는 검사가 여러 개예요. 확인할 항목을 선택해 주세요.",
+        test: null,
+        choices: tests.slice(0, 4).map(({ item }) => testChoice(item)),
+        citations: [],
+        data_status: "public_database",
+        grounding_status: "grounded_internal",
+        answerability: "partial",
+        claim_coverage: 1,
+        missing_information: [],
+      } };
+    }
+    return { domain: "test", reply: noSourceReply() };
+  }
   const topTest = tests[0];
   const secondTest = tests[1];
   const topPublic = publicHits[0];
@@ -433,7 +492,7 @@ function deterministicReply(query, lastTest, tests, publicHits) {
       kind: "choices",
       text: "관련 검사 후보가 여러 개예요. 확인할 항목을 선택해 주세요.",
       test: null,
-      choices: tests.slice(0, 4).map(({ item }) => `${item.name} · ${item.specimen}`),
+      choices: tests.slice(0, 4).map(({ item }) => testChoice(item)),
       citations: [],
       data_status: "public_database",
       grounding_status: "grounded_internal",
@@ -486,12 +545,17 @@ async function handleChat(request, env) {
   try { lastTest = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
   let tests = rankTests(inspection.modelInput);
   let publicHits = rankPublic(inspection.modelInput);
+  const requestedCodes = codeCandidates(inspection.modelInput);
+  if (requestedCodes.length) publicHits = [];
   let catalogSource = "snapshot";
   try {
     const remote = await searchSupabaseCatalog(env, inspection.modelInput);
     if (remote) {
-      tests = remote.tests;
-      publicHits = remote.publicItems;
+      // During a rolling deployment, an older RPC can still return keyword
+      // candidates for an identifier query. Keep the packaged exact-match
+      // result until the RPC explicitly confirms the new identifier contract.
+      if (!requestedCodes.length || remote.identifierQueryHandled) tests = remote.tests;
+      publicHits = requestedCodes.length ? [] : remote.publicItems;
       catalogSource = remote.source;
     }
   } catch (error) {
@@ -503,7 +567,12 @@ async function handleChat(request, env) {
   let responseId = null;
   let plan = null;
 
-  if (env.GEMINI_API_KEY && !RESULT_INTENT.test(inspection.modelInput) && !HANDOFF_INTENT.test(inspection.modelInput)) {
+  if (
+    env.GEMINI_API_KEY
+    && !requestedCodes.length
+    && !RESULT_INTENT.test(inspection.modelInput)
+    && !HANDOFF_INTENT.test(inspection.modelInput)
+  ) {
     try {
       try {
         if (catalogSource === "snapshot") publicHits = await rankPublicWithVectors(env, inspection.modelInput, publicHits);
@@ -527,7 +596,7 @@ async function handleChat(request, env) {
     domain = fallback.domain;
   }
 
-  if (reply.answerability === "none" && reply.kind === "text") {
+  if (reply.answerability === "none" && reply.kind === "text" && !requestedCodes.length) {
     const externalDomain = domain === "unsupported" && SCL_OPERATIONAL_INTENT.test(inspection.modelInput)
       ? "test"
       : domain;

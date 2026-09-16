@@ -17,7 +17,7 @@ def code_candidates(text: str) -> set[str]:
     return {
         m.upper()
         for m in re.findall(
-            r"(?<![A-Za-z0-9])(?:[A-Za-z]\d{6}[A-Za-z]{2}|\d{5})(?![A-Za-z0-9])",
+            r"(?<![A-Za-z0-9])(?:[A-Za-z]\d{6}[A-Za-z]{2}|[A-Za-z]\d{4}|\d[A-Za-z]\d{3}|\d{5})(?![A-Za-z0-9])",
             clean_text(text),
         )
     }

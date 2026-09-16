@@ -73,6 +73,7 @@ export async function searchSupabaseCatalog(env, query, testLimit = 8, publicLim
   const result = {
     tests: boundedArray(payload?.tests, safeTestLimit).map((item) => ({ item, score: Number(item.score || 0), lexicalScore: Number(item.score || 0) })),
     publicItems: boundedArray(payload?.public_items, safePublicLimit).map((item) => ({ item, score: Number(item.score || 0), lexicalScore: Number(item.score || 0) })),
+    identifierQueryHandled: payload?.identifier_query === true,
     source: "supabase",
   };
   const ttl = Math.max(0, Number(env.SUPABASE_CACHE_TTL_SECONDS ?? DEFAULT_CACHE_TTL_MS / 1000)) * 1000;

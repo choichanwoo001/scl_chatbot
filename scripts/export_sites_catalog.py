@@ -41,6 +41,17 @@ def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
     ):
         aliases.setdefault(row["test_id"], []).append(row["alias"])
 
+    billing_codes: dict[int, list[str]] = {}
+    for row in connection.execute(
+        """
+        SELECT tbc.test_variant_id, bc.code
+        FROM test_billing_codes tbc
+        JOIN billing_codes bc ON bc.id = tbc.billing_code_id
+        ORDER BY tbc.id
+        """
+    ):
+        billing_codes.setdefault(row["test_variant_id"], []).append(row["code"])
+
     catalog = []
     query = """
         SELECT tv.id, tv.test_id, t.source_test_code AS code,
@@ -77,6 +88,7 @@ def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
             "updated_at": str(row["updated_at"] or "")[:10],
             "demo": False,
             "public_details": compact_details(row["fields_json"]),
+            "billing_codes": billing_codes.get(row["id"], []),
         }
         item["search"] = " ".join(
             str(value or "")
@@ -89,6 +101,7 @@ def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
                 item["method"],
                 item["schedule"],
                 item["tat"],
+                *item["billing_codes"],
                 *item["public_details"].values(),
             )
         ).casefold()
