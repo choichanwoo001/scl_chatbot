@@ -15,25 +15,24 @@
 
 ## 2. 필수 설정
 
-`.env.example`을 기준으로 Secret을 서버에 주입한다.
+로컬에서는 루트 `.env.example`을 `.env`로 복사해 사용한다. 백엔드, Vite와 Docker Compose가
+같은 파일을 읽는다. Sites 배포값은 같은 변수명을 Sites 런타임 설정에 등록한다.
 
 | 설정 | 필수 시점 | 설명 |
 |---|---|---|
-| `LLM_PROVIDER` | FastAPI provider 선택 | `gemini` 또는 `openai` |
+| `LLM_PROVIDER` | FastAPI provider 선택 | 현재 `gemini` |
 | `GEMINI_API_KEY` | Gemini 실시간 채팅·임베딩 | 서버 전용 |
 | `GEMINI_MODEL` | Gemini 실시간 채팅 | 기본 `gemini-3.1-flash-lite` |
 | `GEMINI_DAILY_REQUEST_LIMIT` | Sites 배포 | D1로 관리하는 일일 호출 상한, 기본 `20` |
-| `OPENAI_API_KEY` | OpenAI 채팅·선택적 외부 검색 | 서버 전용 |
-| `OPENAI_CHAT_MODEL` | OpenAI provider | 기본 `gpt-5.6-luna` |
 | `DATABASE_URL` | 외부 DB 사용 | 기본 SQLite |
+| `MIGRATION_DATABASE_URL` | Alembic 실행 | migration 계정 전용 |
+| `INGEST_DATABASE_URL` | 수집 작업 | `scl_ingest` 계정 전용 |
 | `SUPABASE_URL` | Sites Worker의 실시간 공개 카탈로그 조회 | 미설정 시 내장 스냅샷 |
 | `SUPABASE_PUBLISHABLE_KEY` | Supabase 공개 RPC 호출 | 미설정 시 내장 스냅샷 |
 | `FIELD_ENCRYPTION_KEY` | 운영 상담 접수 | 고정 Fernet 키 |
-| `ALLOWED_ORIGINS` | 배포 | 실제 프런트 도메인 |
+| `HANDOFF_ENCRYPTION_KEY` | Sites 상담 접수 | 고정 AES 키 |
 | `GEMINI_VECTOR_INDEX_PATH` | Gemini Vector | 기본 `data/gemini_vector_index.json` |
-| `OPENAI_VECTOR_STORE_ID` | OpenAI Vector | 승인된 Store ID |
 | `VECTOR_SEARCH_ENABLED` | Vector 전환 | `.env.example`은 `true`, 미설정 코드 기본값은 `false` |
-| `RESULT_API_*` | 개인 결과 연동 | Gateway·mTLS 설정 |
 | `SEED_DEMO_ON_EMPTY` | 개발·단위 테스트만 | 운영 기본 `false` |
 
 ## 3. 배포와 기동

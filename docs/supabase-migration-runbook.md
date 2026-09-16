@@ -9,11 +9,11 @@
 - 최종 전체 백업 `tmp/migration/20260915-cutover-source.db`에서 48,108행을 적재했다. 전환 직전 원본을 다시 검사해 백업 이후 변경이 없음을 확인했다. 원본 SQLite와 백업은 보존했다.
 - `supabase-import.json`, `supabase-verification.json`에서 모든 테이블의 행 수·정규화 체크섬·제약조건 검증을 통과했다. 보고서는 `tmp/migration/`에 있다. 추출문·청크의 명시적 NUL 치환은 기존 리허설과 동일하다.
 - 실제 Supabase의 `scl_app` 계정으로 API 7개와 카탈로그 export를 실행해 SQLite 결과와 일치함을 확인했다. 벡터 입력 3,933건도 일치한다. 신규 임베딩 API 호출은 하지 않았다. 보고서: `tmp/migration/supabase-runtime-validation.json`.
-- `.env.local`의 `DATABASE_URL`은 `scl_app`, `INGEST_DATABASE_URL`은 `scl_ingest`로 설정했다. 두 역할은 DDL 권한이 없고, 필요한 DML 권한만 있는 것을 확인했다. 기존 Fernet 키를 유지하고 `APP_ENV=production`으로 전환했다.
+- `.env`의 `DATABASE_URL`은 `scl_app`, `INGEST_DATABASE_URL`은 `scl_ingest`로 설정했다. 두 역할은 DDL 권한이 없고, 필요한 DML 권한만 있는 것을 확인했다. 기존 Fernet 키를 유지하고 `APP_ENV=production`으로 전환했다.
 - 로컬 API를 `127.0.0.1:8000`에서 실행하고 health·카탈로그 상태·HPV 검색 HTTP 200을 확인했다. PID 기록은 `tmp/migration/supabase-api.pid`이다.
 - Supabase Table Editor의 `app → test_variants`에 실제 3,327건이 표시되는 것을 확인했다.
 - Compose 서비스는 backend·frontend뿐이다. Docker backend는 production 검증을 강제해 SQLite로 시작하지 않게 했다.
-- Compose 설정 검증을 통과했다. 실행 컨테이너에 migration·ingest URL과 DB 관리자 비밀번호를 전달하지 않고, `.env.local`과 SQLite 압축 snapshot을 이미지 빌드에서 제외했다.
+- Compose 설정 검증을 통과했다. 실행 컨테이너에 migration·ingest URL과 DB 관리자 비밀번호를 전달하지 않고, `.env`와 SQLite 압축 snapshot을 이미지 빌드에서 제외했다.
 - 2026-09-16 Docker Desktop 시작 오류를 복구했다. 종료 후 `Docker/run`과 `docker-secrets-engine` 소켓 폴더를 각각 `.pre-supabase-20260916-011113` 백업 이름으로 옮겼고, 기존 `settings-store.json`은 `tmp/migration/docker-settings-before-repair.json`에 보존했다. `EnableDockerAI=false`로 변경한 뒤 엔진 정상 시작을 확인했다. Docker AI 기능은 현재 꺼져 있다. [동일한 오류 보고](https://github.com/docker/desktop-feedback/issues/531).
 - 리허설 컨테이너 `scl-postgres-migration-test`의 라벨과 단일 익명 데이터 볼륨을 확인했다. `tmp/migration/docker-postgres-20260916.dump`에 27,362,379바이트의 PostgreSQL 백업을 만들고 `pg_restore --list` 검증 후 컨테이너와 해당 볼륨을 삭제했다. 둘 다 목록에 없는 것을 확인했다. 백업 해시·삭제 결과: `tmp/migration/docker-removal-backup.json`. 다른 컨테이너·볼륨은 정리하지 않았다.
 
@@ -30,9 +30,9 @@
 
 ## 연결 설정
 
-저장소 루트에서 실행한다. 비밀값은 Git에서 제외된 `.env.local` 또는 배포 환경 비밀 설정에 둔다. `.env.local`은 `.env`보다 우선하며, `SCL_SKIP_LOCAL_ENV=true`는 두 파일을 모두 읽지 않는다.
+저장소 루트에서 실행한다. 모든 로컬 설정과 비밀값은 Git에서 제외된 루트 `.env` 하나에 두고, 배포값은 호스팅 환경의 비밀 설정에 둔다. `SCL_SKIP_LOCAL_ENV=true`는 테스트에서 루트 `.env` 로드를 건너뛴다.
 
-Connect → Session pooler에서 확인한 프로젝트 ID·호스트와 DB 비밀번호를 아래처럼 `.env.local`에 넣으면 연결 문자열의 비밀번호 인코딩을 자동 처리할 수 있다. API key가 아닌 Database password를 사용한다.
+Connect → Session pooler에서 확인한 프로젝트 ID·호스트와 DB 비밀번호를 아래처럼 `.env`에 넣으면 연결 문자열의 비밀번호 인코딩을 자동 처리할 수 있다. API key가 아닌 Database password를 사용한다.
 
 ```dotenv
 SUPABASE_PROJECT_REF=PROJECT_REF
@@ -46,7 +46,7 @@ SUPABASE_DB_PASSWORD='DATABASE_PASSWORD'
 
 이 명령은 `MIGRATION_DATABASE_URL`과 스키마·pool 설정만 준비한다. 데이터 적재나 API의 `DATABASE_URL` 전환은 하지 않는다.
 
-Docker Compose는 backend·frontend만 실행하고 DB 컨테이너를 만들지 않는다. backend는 `APP_ENV=production`으로 실행되어 DB 설정 누락 시 SQLite로 시작하지 않는다. 검증을 마친 Supabase `DATABASE_URL`과 기존 `FIELD_ENCRYPTION_KEY`를 `.env.local`에 설정한 뒤 `docker compose up -d --build`로 시작한다. `data` 마운트는 첨부파일·인덱스 보존용으로 유지한다.
+Docker Compose는 backend·frontend만 실행하고 DB 컨테이너를 만들지 않는다. backend는 `APP_ENV=production`으로 실행되어 DB 설정 누락 시 SQLite로 시작하지 않는다. 검증을 마친 Supabase `DATABASE_URL`과 기존 `FIELD_ENCRYPTION_KEY`를 `.env`에 설정한 뒤 `docker compose up -d --build`로 시작한다. `data` 마운트는 첨부파일·인덱스 보존용으로 유지한다.
 
 ```dotenv
 APP_ENV=development

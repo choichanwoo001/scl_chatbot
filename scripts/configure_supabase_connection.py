@@ -19,7 +19,7 @@ def configure(path: Path) -> None:
     if not project.isalnum() or not host.endswith(".pooler.supabase.com"):
         raise ValueError("Set SUPABASE_PROJECT_REF and the exact SUPABASE_DB_HOST from Connect → Session pooler")
     if not password:
-        raise ValueError("Set SUPABASE_DB_PASSWORD in .env.local before preparing the connection")
+        raise ValueError("Set SUPABASE_DB_PASSWORD in .env before preparing the connection")
     url = URL.create(
         "postgresql+psycopg", username=f"postgres.{project}", password=password,
         host=host, port=5432, database="postgres", query={"sslmode": "require"},
@@ -32,7 +32,7 @@ def configure(path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--env-file", type=Path, default=Path(__file__).resolve().parents[1] / ".env.local")
+    parser.add_argument("--env-file", type=Path, default=Path(__file__).resolve().parents[1] / ".env")
     args = parser.parse_args()
     try:
         configure(args.env_file)

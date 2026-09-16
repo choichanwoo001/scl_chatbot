@@ -33,7 +33,7 @@ def main() -> None:
         raise ValueError("Evaluation database must be separate from the source")
     with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as src, sqlite3.connect(dest) as dst:
         src.backup(dst)
-    local = {**dotenv_values(root / ".env"), **dotenv_values(root / ".env.local")} if args.live else {}
+    local = dict(dotenv_values(root / ".env")) if args.live else {}
     os.environ.update(
         SCL_SKIP_LOCAL_ENV="true",
         APP_ENV="test",

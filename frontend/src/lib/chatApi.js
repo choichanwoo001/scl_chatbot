@@ -1,4 +1,4 @@
-const CHAT_API_URL = import.meta.env.VITE_CHAT_API_URL || new URL("/api/chat", window.location.origin).toString();
+const CHAT_API_URL = new URL("/api/chat", window.location.origin).toString();
 const CHAT_HEALTH_URL = new URL("/health", CHAT_API_URL).toString();
 const API_BASE_URL = new URL("/api/", CHAT_API_URL);
 

@@ -5,9 +5,7 @@ services:
       dockerfile: backend/Dockerfile
     env_file:
       - path: .env
-        required: false
-      - path: .env.local
-        required: false
+        required: true
     # Docker runs the API against the external Supabase database.
     # Production validation rejects the default SQLite URL and missing encryption key.
     environment:
@@ -26,8 +24,6 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-      args:
-        VITE_CHAT_API_URL: http://localhost:8000/api/chat
     depends_on:
       - backend
     ports:

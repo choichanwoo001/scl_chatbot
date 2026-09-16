@@ -34,4 +34,4 @@ $env:PYTHONPATH='backend'
 .venv/Scripts/python.exe scripts/evaluate_query_interpretation.py --live
 ```
 
-로컬 화면은 Vite 실행 환경에 `VITE_CHAT_API_URL=http://127.0.0.1:8000/api/chat`을 지정해 FastAPI로 연결한다. Sites Worker의 배포용 검색 경로는 이번 Python 변경의 적용 대상이 아니다.
+로컬 화면은 Vite의 `/api`, `/health` 프록시를 통해 `http://127.0.0.1:8000`의 FastAPI에 연결한다. 별도 프런트 환경변수는 필요하지 않다.

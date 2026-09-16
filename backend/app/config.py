@@ -11,7 +11,6 @@ ROOT = Path(__file__).resolve().parents[2]
 
 if os.getenv("SCL_SKIP_LOCAL_ENV", "false").lower() not in {"1", "true", "yes"}:
     load_dotenv(ROOT / ".env")
-    load_dotenv(ROOT / ".env.local", override=True)
 DEFAULT_DATABASE_URL = f"sqlite:///{(ROOT / 'data' / 'scl_catalog.db').as_posix()}"
 
 

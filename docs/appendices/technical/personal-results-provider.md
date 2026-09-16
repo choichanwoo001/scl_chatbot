@@ -30,7 +30,7 @@ mTLS 인증서를 구현했다. 제공자 토큰의 만료시간과 로컬 최�
 
 ## 설정
 
-`.env.example`의 `RESULT_API_*` 값을 기관 Gateway에 맞게 설정한다. 개발 중 로컬 HTTP는
+기관 Gateway 연동을 활성화할 때만 문서의 `RESULT_API_*` 값을 루트 `.env`에 추가한다. 개발 중 로컬 HTTP는
 명시적으로 `RESULT_API_ALLOW_HTTP=true`인 경우에만 허용한다. 운영에서는 HTTPS를 강제하고,
 필요하면 `RESULT_API_CA_BUNDLE`, `RESULT_API_CLIENT_CERT`, `RESULT_API_CLIENT_KEY`로 사설 CA와
 mTLS를 설정한다.

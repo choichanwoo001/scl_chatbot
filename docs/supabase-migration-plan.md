@@ -6,7 +6,7 @@
 
 - 기존 프로젝트 `twvjibwtlszoyaywrxdf`의 `postgres` DB, `app` 스키마에 32개 테이블 48,108행을 이전했다.
 - 전체 체크섬·제약조건 검증과 SQLite/Supabase API 7개·export 비교를 통과했다. 원본 SQLite 및 최종 백업을 보존했다.
-- `.env.local`에 권한을 제한한 `scl_app` 실행 계정과 `scl_ingest` 수집 계정을 설정했고 로컬 API를 Supabase로 실행했다.
+- 루트 `.env`에 권한을 제한한 `scl_app` 실행 계정과 `scl_ingest` 수집 계정을 설정했고 로컬 API를 Supabase로 실행했다.
 - Docker Compose는 backend·frontend만 실행하며 SQLite로 시작하지 않는다. 2026-09-16 Docker 시작 오류를 복구하고 기존 테스트 DB 컨테이너와 해당 익명 볼륨을 추가 백업 후 삭제했다.
 - 공개 Worker/D1 통합과 외부 FastAPI 배포는 아직 완료하지 않았다. 아래 이전 날짜의 내용은 당시 조사·계획 기록이며 최신 실행 상태는 [실행 절차](supabase-migration-runbook.md)를 따른다.
 
@@ -76,7 +76,7 @@ React 화면 → 동일 출처 API 프록시 또는 HTTPS FastAPI
 
 - FastAPI가 검색, 참조 검증, 상담·피드백, 세션, 일일 사용량을 담당한다.
 - Supabase에는 기존 32개 테이블과 세션·일일 사용량 테이블을 둔다. 초기 목표는 애플리케이션 테이블 34개이며, migration 관리 테이블은 별도다.
-- React의 기존 API 요청·응답 계약을 유지한다. Sites를 유지하는 경우 Worker의 API 역할을 프록시로 전환하거나 `VITE_CHAT_API_URL`로 FastAPI를 직접 지정한다. 실제 호스팅 제약 확인 후 선택한다.
+- React의 기존 API 요청·응답 계약을 유지한다. 브라우저는 항상 같은 origin의 `/api`를 호출하고, 로컬 Vite와 Docker Nginx는 FastAPI로 프록시하며 Sites는 Worker가 처리한다.
 - FastAPI의 별도 실행 환경이 필요하다. Supabase DB를 생성하는 것만으로 Python API가 배포되지는 않는다.
 - 기존 Gemini 로컬 인덱스·OpenAI Vector Store와 ID 매핑을 유지한다. 첨부 원본과 인덱스 파일은 FastAPI 실행 환경에 제공하고, 모든 인스턴스에 같은 버전을 배포한다.
 - Auth·Storage·pgvector 전환과 검색 알고리즘 개선은 별도 범위다. 공개 스냅샷은 개발·테스트용으로 유지할 수 있지만 운영의 원본은 PostgreSQL로 명시한다.
