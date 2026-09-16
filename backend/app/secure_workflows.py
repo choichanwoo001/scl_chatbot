@@ -25,6 +25,8 @@ SAFE_REF_PATTERN = re.compile(
 class SensitiveFieldCipher:
     def __init__(self, settings: Settings) -> None:
         raw_key = settings.field_encryption_key
+        if settings.app_environment == "production" and not raw_key:
+            raise ValueError("FIELD_ENCRYPTION_KEY is required in production")
         if raw_key:
             key = raw_key.encode("ascii")
         else:
@@ -72,8 +74,9 @@ def _similarity(left: str, right: str) -> float:
 
 
 class WorkflowService:
-    def __init__(self, settings: Settings) -> None:
-        init_database()
+    def __init__(self, settings: Settings, session_factory=None) -> None:
+        self.session_factory = session_factory or SessionLocal
+        init_database(self.session_factory.kw["bind"])
         self.cipher = SensitiveFieldCipher(settings)
 
     def create_handoff(self, payload: HandoffCreateRequest) -> HandoffReceipt:
@@ -84,7 +87,7 @@ class WorkflowService:
             raise ValueError("연락처 형식을 확인해 주세요.")
         now = datetime.now(UTC)
         public_id = f"SCL-{now:%Y%m%d}-{secrets.token_hex(4).upper()}"
-        with SessionLocal.begin() as session:
+        with self.session_factory.begin() as session:
             session.add(
                 HandoffRequest(
                     public_id=public_id,
@@ -103,7 +106,7 @@ class WorkflowService:
         return HandoffReceipt(public_id=public_id, status="submitted", created_at=now.isoformat())
 
     def get_handoff(self, public_id: str) -> HandoffReceipt | None:
-        with SessionLocal() as session:
+        with self.session_factory() as session:
             item = session.scalar(select(HandoffRequest).where(HandoffRequest.public_id == public_id))
             if not item:
                 return None
@@ -125,7 +128,7 @@ class WorkflowService:
             [payload.domain or "", payload.sub_intent or "", normalized, *sorted(refs)]
         )
         fingerprint = hashlib.sha256(fingerprint_seed.encode("utf-8")).hexdigest()
-        with SessionLocal.begin() as session:
+        with self.session_factory.begin() as session:
             candidate = session.scalar(select(FAQCandidate).where(FAQCandidate.fingerprint == fingerprint))
             if candidate is None:
                 same_branch = list(

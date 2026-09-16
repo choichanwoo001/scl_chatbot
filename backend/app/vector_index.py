@@ -66,9 +66,7 @@ class RDBVectorDocumentSource:
         documents: list[VectorDocument] = []
         with SessionLocal() as session:
             if "document" in selected:
-                rows = session.scalars(
-                    select(PublicDocument).where(PublicDocument.status == "active")
-                )
+                rows = session.scalars(select(PublicDocument).where(PublicDocument.status == "active"))
                 for item in rows:
                     body = (item.body_text or item.summary or "").strip()
                     if not body:
@@ -141,9 +139,7 @@ class RDBVectorDocumentSource:
                         )
                     )
             if "faq" in selected:
-                rows = session.scalars(
-                    select(FAQCandidate).where(FAQCandidate.status == "published")
-                )
+                rows = session.scalars(select(FAQCandidate).where(FAQCandidate.status == "published"))
                 for item in rows:
                     local_ref = f"faq:{item.id}"
                     content = self._markdown(
@@ -265,9 +261,7 @@ class OpenAIVectorIndexService:
             existing = {
                 item.local_ref: item
                 for item in session.scalars(
-                    select(VectorIndexItem).where(
-                        VectorIndexItem.vector_store_id == self.vector_store_id
-                    )
+                    select(VectorIndexItem).where(VectorIndexItem.vector_store_id == self.vector_store_id)
                 )
             }
         changed: list[tuple[VectorDocument, VectorIndexItem | None]] = []
@@ -485,12 +479,14 @@ class OpenAIVectorIndexService:
         size: int,
     ) -> Iterable[list[tuple[VectorDocument, VectorIndexItem | None]]]:
         for index in range(0, len(items), size):
-            yield items[index:index + size]
+            yield items[index : index + size]
 
 
 def vector_index_status(
     vector_store_id: str | None = None,
     app_settings: Settings = settings,
+    *,
+    session_factory=None,
 ) -> dict[str, Any]:
     if app_settings.llm_provider == "gemini":
         path = Path(app_settings.gemini_vector_index_path)
@@ -519,7 +515,8 @@ def vector_index_status(
             "items_with_errors": 0,
             "last_indexed_at": payload.get("created_at"),
         }
-    init_database()
+    factory = session_factory or SessionLocal
+    init_database(factory.kw["bind"])
     target = vector_store_id or app_settings.openai_vector_store_id
     if not target:
         return {
@@ -531,11 +528,9 @@ def vector_index_status(
             "items_with_errors": 0,
             "last_indexed_at": None,
         }
-    with SessionLocal() as session:
+    with factory() as session:
         items = list(
-            session.scalars(
-                select(VectorIndexItem).where(VectorIndexItem.vector_store_id == target)
-            )
+            session.scalars(select(VectorIndexItem).where(VectorIndexItem.vector_store_id == target))
         )
     counts: dict[str, int] = {}
     by_type: dict[str, int] = {}

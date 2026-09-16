@@ -1,52 +1,20 @@
 from __future__ import annotations
 
 import asyncio
-import re
 import time
-import uuid
-from dataclasses import dataclass, field
 
-from .catalog import catalog
+from .chat_contracts import ModelPlan, ModeratedContent, RetrievalContext
 from .chat_grounding import GroundedReplyBuilder
 from .chat_policy import ChatPolicy
+from .chat_sessions import SessionState, SessionStore
 from .config import Settings
 from .external_search import OpenAIWebSearchProvider
 from .gemini_gateway import GeminiGateway
 from .guardrails import InputInspection, inspect_input
 from .offline_chat import OfflineChatResponder
-from .openai_gateway import ModelPlan, ModeratedContent, OpenAIGateway, RetrievalContext
+from .openai_gateway import OpenAIGateway
 from .public_search import PublicDataSearch, SearchHit, public_search
 from .schemas import ChatResponse, Reply, TestInfo
-
-
-@dataclass
-class SessionState:
-    history: list[dict[str, str]] = field(default_factory=list)
-    last_test_code: str | None = None
-    last_test_variant_key: str | None = None
-
-
-class SessionStore:
-    def __init__(self, history_limit: int) -> None:
-        self.history_limit = history_limit
-        self._sessions: dict[str, SessionState] = {}
-
-    def get(self, session_id: str | None) -> tuple[str, SessionState]:
-        safe_id = (
-            session_id
-            if session_id and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id)
-            else uuid.uuid4().hex
-        )
-        return safe_id, self._sessions.setdefault(safe_id, SessionState())
-
-    def append(self, state: SessionState, user: str, assistant: str) -> None:
-        state.history.extend([{"role": "user", "content": user}, {"role": "assistant", "content": assistant}])
-        state.history[:] = state.history[-self.history_limit :]
-
-    def delete(self, session_id: str) -> bool:
-        if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", session_id):
-            return False
-        return self._sessions.pop(session_id, None) is not None
 
 
 class LiveChatUnavailable(RuntimeError):
@@ -54,21 +22,35 @@ class LiveChatUnavailable(RuntimeError):
 
 
 class ChatOrchestrator:
-    def __init__(self, settings: Settings, search: PublicDataSearch = public_search) -> None:
+    def __init__(
+        self,
+        settings: Settings,
+        search: PublicDataSearch = public_search,
+        *,
+        app_catalog=None,
+        session_store=None,
+    ) -> None:
         self.settings = settings
         self.public_search = search
-        self.sessions = SessionStore(settings.session_history_limit)
-        if settings.llm_provider == "gemini" and settings.gemini_api_key:
-            self.gateway = GeminiGateway(settings, search)
+        self.catalog = app_catalog or search.catalog
+        self.sessions = session_store or SessionStore(
+            settings.session_history_limit, settings.session_ttl_seconds, settings.session_max_entries
+        )
+        if settings.llm_provider == "gemini":
+            self.gateway = (
+                GeminiGateway(settings, search, app_catalog=self.catalog) if settings.gemini_api_key else None
+            )
+        elif settings.llm_provider == "openai":
+            self.gateway = (
+                OpenAIGateway(settings, search, app_catalog=self.catalog) if settings.openai_api_key else None
+            )
         else:
-            self.gateway = OpenAIGateway(settings, search) if settings.openai_api_key else None
+            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
         self.policy = ChatPolicy()
-        self.reply_builder = GroundedReplyBuilder(catalog, search)
-        self.offline_responder = OfflineChatResponder(catalog, search, self.reply_builder)
+        self.reply_builder = GroundedReplyBuilder(self.catalog, search)
+        self.offline_responder = OfflineChatResponder(self.catalog, search, self.reply_builder)
         self.external_search = (
-            OpenAIWebSearchProvider(settings)
-            if settings.external_web_search_configured
-            else None
+            OpenAIWebSearchProvider(settings) if settings.external_web_search_configured else None
         )
 
     def end_session(self, session_id: str) -> bool:
@@ -78,6 +60,7 @@ class ChatOrchestrator:
         self,
         message: str,
         history: list[dict[str, str]],
+        previous_tests: list[TestInfo] | None = None,
     ) -> tuple[
         bool,
         ModelPlan | None,
@@ -95,6 +78,24 @@ class ChatOrchestrator:
             timings[name] = round((time.perf_counter() - started) * 1000, 1)
             return result
 
+        if isinstance(self.gateway, GeminiGateway):
+            retrieval = None
+            try:
+                interpreted = await timed_call(
+                    "interpretation", self.gateway.interpret, message, history, previous_tests or []
+                )
+                retrieval = await timed_call(
+                    "retrieval",
+                    self.gateway.retrieve_interpreted,
+                    message,
+                    interpreted,
+                    previous_tests or [],
+                )
+                plan, response_id = await timed_call("model", self.gateway.plan, message, history, retrieval)
+            except ModeratedContent:
+                return True, None, None, retrieval, timings
+            return False, plan, response_id, retrieval, timings
+
         integrated_moderation = bool(
             getattr(self.gateway, "uses_integrated_moderation", False)
             and not self.public_search.settings.vector_search_configured
@@ -102,9 +103,7 @@ class ChatOrchestrator:
         if integrated_moderation:
             retrieval = await timed_call("retrieval", retrieve, message)
             try:
-                plan, response_id = await timed_call(
-                    "model", self.gateway.plan, message, history, retrieval
-                )
+                plan, response_id = await timed_call("model", self.gateway.plan, message, history, retrieval)
             except ModeratedContent:
                 return True, None, None, retrieval, timings
             return False, plan, response_id, retrieval, timings
@@ -117,9 +116,7 @@ class ChatOrchestrator:
             flagged = await timed_call("moderation", self.gateway.moderate, message)
             retrieval = None if flagged else await timed_call("retrieval", retrieve, message)
         else:
-            moderation_task = asyncio.create_task(
-                timed_call("moderation", self.gateway.moderate, message)
-            )
+            moderation_task = asyncio.create_task(timed_call("moderation", self.gateway.moderate, message))
             retrieval_task = asyncio.create_task(timed_call("retrieval", retrieve, message))
             flagged, retrieval = await asyncio.gather(moderation_task, retrieval_task)
         if flagged:
@@ -158,6 +155,7 @@ class ChatOrchestrator:
                 flagged, plan, response_id, retrieval, timings = await self._call_gateway(
                     inspection.model_input,
                     state.history,
+                    state.previous_tests,
                 )
             except Exception as error:
                 if require_live:
@@ -193,22 +191,25 @@ class ChatOrchestrator:
                 return response
 
             assert plan is not None
-            self.policy.apply_followup(
-                plan,
-                inspection.model_input,
-                state.last_test_code,
-                state.last_test_variant_key,
-            )
+            structured_reply = getattr(retrieval, "structured_reply", None)
+            if structured_reply is None:
+                self.policy.apply_followup(
+                    plan,
+                    inspection.model_input,
+                    state.last_test_code,
+                    state.last_test_variant_key,
+                )
             flags = self.policy.enforce(plan)
             grounding_started = time.perf_counter()
             trusted_hits = retrieval.hits_by_ref if retrieval else None
             trusted_tests = list(retrieval.test_candidates) if retrieval else None
             if (
                 trusted_tests is not None
+                and structured_reply is None
                 and self.policy.is_test_followup(inspection.model_input)
                 and state.last_test_code
             ):
-                previous_test = catalog.get(state.last_test_code, state.last_test_variant_key)
+                previous_test = self.catalog.get(state.last_test_code, state.last_test_variant_key)
                 if previous_test and all(
                     item.variant_key != previous_test.variant_key for item in trusted_tests
                 ):
@@ -223,6 +224,12 @@ class ChatOrchestrator:
                 trusted_hits=trusted_hits,
                 trusted_tests=trusted_tests,
             )
+            if structured_reply is not None and not flags.requires_authentication and not flags.needs_handoff:
+                reply = structured_reply
+                matched = reply.test
+                state.previous_tests = list(retrieval.test_candidates)
+                state.last_test_code = matched.code if matched else None
+                state.last_test_variant_key = matched.variant_key if matched else None
             if (
                 self.external_search is not None
                 and reply.answerability == "none"
@@ -249,6 +256,8 @@ class ChatOrchestrator:
             if matched:
                 state.last_test_code = matched.code
                 state.last_test_variant_key = matched.variant_key
+                if structured_reply is None:
+                    state.previous_tests = [matched]
             if inspection.category == "profanity_with_intent":
                 reply.text = "표현은 조금만 부드럽게 부탁드려요. " + reply.text
             self.sessions.append(state, inspection.model_input, reply.text)

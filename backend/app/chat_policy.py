@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .openai_gateway import ModelPlan
+from .chat_contracts import ModelPlan
 
 RESULT_AUTH_SUBINTENTS = {
     "navigate_to_result",

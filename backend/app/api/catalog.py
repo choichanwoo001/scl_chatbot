@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 
 from ..dependencies import AppServices, get_services
-from ..schemas import CatalogStatus, TaxonomyTestLinkInfo, TestInfo
+from ..schemas import CatalogStatus, TaxonomyRelationInfo, TaxonomyTestLinkInfo, TestInfo
 
 router = APIRouter(prefix="/api")
 
@@ -56,3 +56,12 @@ async def get_test(
                 },
             )
     raise HTTPException(status_code=404, detail="검사항목을 찾을 수 없습니다.")
+
+
+@router.get("/taxonomy/{term_id}/relations", response_model=list[TaxonomyRelationInfo])
+async def taxonomy_relations(
+    term_id: int = Path(ge=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    services: AppServices = Depends(get_services),
+) -> list[TaxonomyRelationInfo]:
+    return services.taxonomy_repository.list_relations(term_id, limit)

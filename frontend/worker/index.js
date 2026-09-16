@@ -1,3 +1,5 @@
+import { ensureDatabase, readSession, saveSession } from "./session-store.js";
+import { relayBackend } from "./backend-proxy.js";
 import { catalog, publicItems } from "./catalog-data.js";
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -19,7 +21,7 @@ const DEFAULT_EXTERNAL_DOMAINS = [
   "pubmed.ncbi.nlm.nih.gov", "clinicaltrials.gov", "who.int", "cdc.gov", "fda.gov",
 ];
 
-let schemaReady = false;
+
 
 class GeminiDailyLimitError extends Error {}
 
@@ -243,55 +245,6 @@ function formReply(kind, text) {
 
 function noSourceReply() {
   return formReply("text", "확인된 공개 자료에서 답변 근거를 찾지 못했습니다. 확인되지 않은 내용을 추측하지 않았습니다. 검사명·검사코드나 찾으시는 문서를 더 구체적으로 알려주세요.");
-}
-
-async function ensureDatabase(env) {
-  if (!env.DB) throw new Error("D1 binding DB is not configured");
-  if (schemaReady) return;
-  await env.DB.batch([
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS chat_sessions (
-      session_id TEXT PRIMARY KEY NOT NULL,
-      last_test_json TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )`),
-    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_chat_sessions_updated_at ON chat_sessions (updated_at)"),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS handoff_requests (
-      public_id TEXT PRIMARY KEY NOT NULL,
-      session_hash TEXT NOT NULL,
-      inquiry_type TEXT NOT NULL,
-      requester_name_encrypted TEXT NOT NULL,
-      phone_encrypted TEXT NOT NULL,
-      organization_encrypted TEXT,
-      content_encrypted TEXT NOT NULL,
-      related_refs_json TEXT NOT NULL,
-      status TEXT NOT NULL,
-      consented_at TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    )`),
-    env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_handoff_requests_created_at ON handoff_requests (created_at)"),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS gemini_daily_usage (
-      day TEXT PRIMARY KEY NOT NULL,
-      calls INTEGER NOT NULL DEFAULT 0
-    )`),
-  ]);
-  schemaReady = true;
-}
-
-async function readSession(env, sessionId) {
-  await ensureDatabase(env);
-  const row = await env.DB.prepare("SELECT last_test_json FROM chat_sessions WHERE session_id = ?").bind(sessionId).first();
-  if (!row?.last_test_json) return null;
-  try { return JSON.parse(row.last_test_json); } catch { return null; }
-}
-
-async function saveSession(env, sessionId, lastTest) {
-  await ensureDatabase(env);
-  const now = new Date().toISOString();
-  await env.DB.prepare(`INSERT INTO chat_sessions (session_id, last_test_json, created_at, updated_at)
-    VALUES (?, ?, ?, ?)
-    ON CONFLICT(session_id) DO UPDATE SET last_test_json = excluded.last_test_json, updated_at = excluded.updated_at`)
-    .bind(sessionId, lastTest ? JSON.stringify(lastTest) : null, now, now).run();
 }
 
 async function sha256(value) {
@@ -525,6 +478,9 @@ async function handleChat(request, env) {
     });
   }
 
+  if (body.require_live && !env.GEMINI_API_KEY) {
+    return detail("실시간 AI 연결이 구성되지 않았습니다.", 503);
+  }
   let lastTest = null;
   try { lastTest = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
   const tests = rankTests(inspection.modelInput);
@@ -694,6 +650,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/health" || url.pathname.startsWith("/api/")) {
       try {
+        if (env.BACKEND_API_URL) return await relayBackend(request, env);
         return await handleApi(request, env, url);
       } catch (error) {
         console.error("Unhandled API error", error);

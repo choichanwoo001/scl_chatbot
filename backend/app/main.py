@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import sessionmaker
 
 from .api import catalog as catalog_api
 from .api import chat as chat_api
 from .api import public_data as public_data_api
 from .api import results as results_api
 from .api import workflows as workflows_api
-from .catalog import catalog
+from .catalog import DatabaseCatalog
+from .chat_sessions import DatabaseSessionStore
 from .config import Settings, settings
+from .database import SessionLocal, create_database_engine
 from .dependencies import AppServices
 from .exception_handlers import register_exception_handlers
 from .orchestrator import ChatOrchestrator
@@ -20,15 +23,30 @@ from .secure_workflows import WorkflowService
 
 
 def create_services(app_settings: Settings) -> AppServices:
-    search = PublicDataSearch(app_settings)
+    factory = (
+        SessionLocal
+        if app_settings == settings
+        else sessionmaker(
+            bind=create_database_engine(app_settings=app_settings),
+            expire_on_commit=False,
+        )
+    )
+    catalog = DatabaseCatalog(app_settings, factory)
+    search = PublicDataSearch(app_settings, session_factory=factory, app_catalog=catalog)
+    sessions = DatabaseSessionStore(
+        factory,
+        app_settings.session_history_limit,
+        app_settings.session_ttl_seconds,
+        app_settings.session_max_entries,
+    )
     return AppServices(
         settings=app_settings,
-        orchestrator=ChatOrchestrator(app_settings, search),
-        workflow_service=WorkflowService(app_settings),
+        orchestrator=ChatOrchestrator(app_settings, search, app_catalog=catalog, session_store=sessions),
+        workflow_service=WorkflowService(app_settings, factory),
         result_service=ResultService(app_settings),
         catalog=catalog,
         public_search=search,
-        taxonomy_repository=TaxonomyRepository(),
+        taxonomy_repository=TaxonomyRepository(factory),
     )
 
 

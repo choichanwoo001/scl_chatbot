@@ -108,14 +108,19 @@ $env:PYTHONPATH="backend"
 .venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
 ```
 
-루트의 `.env.example`을 `.env.local`로 복사한 뒤 `GEMINI_API_KEY`를 설정하면 FastAPI도 Gemini
-모드로 동작합니다. `python scripts/build_gemini_vector_index.py`로 공개 문서·첨부 벡터 인덱스를
+로컬 FastAPI의 기본 provider는 Gemini입니다. 루트의 `.env.example`을 `.env.local`로 복사한 뒤
+`GEMINI_API_KEY`를 설정하세요. 기존 `.env.local`이 있다면 덮어쓰지 말고 필요한 값만 수정합니다.
+기본 모델은 `gemini-3.1-flash-lite`이고 `.env.local` 변경 후 백엔드를 재시작해야 합니다.
+Gemini 키가 없거나 호출에 실패해도 OpenAI로 자동 전환하지 않습니다.
+`/health`의 `live_chat_available`은 키 설정 여부이며 실제 연결 성공은
+`/api/chat`에 `require_live=true`로 요청해 확인합니다. Docker도 `.env.local`을 우선 적용합니다.
+공통 요청 타임아웃은 `LLM_TIMEOUT_SECONDS`로 설정합니다. `python scripts/build_gemini_vector_index.py`로 공개 문서·첨부 벡터 인덱스를
 갱신할 수 있습니다. 현재 공개 프런트엔드는 `require_live=false`를 명시해 Gemini 실패 시 검증된
 로컬 검색으로 복귀합니다. 실시간 호출 성공을 필수로 검증할 때만 API에 `require_live=true`를
 보냅니다. `SEED_DEMO_ON_EMPTY=true`는 개발·단위 테스트에서만 사용하며, 키를 `VITE_`
 환경변수에 넣으면 브라우저에 노출되므로 금지합니다.
 
-외부 공개자료 검색은 기본적으로 꺼져 있습니다. `EXTERNAL_WEB_SEARCH_ENABLED=true`와 서버 전용 `OPENAI_API_KEY`를 설정해야 하며, `EXTERNAL_WEB_SEARCH_ALLOWED_DOMAINS`에 운영 허용 도메인만 등록합니다. 이는 기관의 공식 승인을 의미하지 않습니다. 검색 결과의 사실 문장에 유효한 웹 인용이 빠져 있거나 인용 URL이 허용 도메인을 벗어나면 답변 전체를 폐기하고, 채택한 경우에는 사용자가 판단할 수 있도록 원문 링크를 표시합니다.
+OpenAI 기반 외부 공개자료 검색은 Gemini 모드에서는 호출하지 않으며 기본적으로 꺼져 있습니다. `EXTERNAL_WEB_SEARCH_ENABLED=true`와 서버 전용 `OPENAI_API_KEY`를 설정해야 하며, `EXTERNAL_WEB_SEARCH_ALLOWED_DOMAINS`에 운영 허용 도메인만 등록합니다. 이는 기관의 공식 승인을 의미하지 않습니다. 검색 결과의 사실 문장에 유효한 웹 인용이 빠져 있거나 인용 URL이 허용 도메인을 벗어나면 답변 전체를 폐기하고, 채택한 경우에는 사용자가 판단할 수 있도록 원문 링크를 표시합니다.
 
 ### 선택 사항: OpenAI 요청 로그 확인(request-logger)
 
@@ -156,7 +161,18 @@ Codex 같은 코딩 에이전트 자체의 요청을 관찰하려면 `npm run re
 `.\scripts\start_request_logger.ps1 -Force`를 사용하고, 원본 도구를 갱신하려면 `-Update`를
 추가합니다.
 
-기본 RDB는 `data/scl_catalog.db` SQLite 파일입니다. PostgreSQL을 사용하려면 `DATABASE_URL=postgresql+psycopg://...`를 설정합니다. 공개 검사항목 전체 동기화는 다음 명령으로 실행합니다.
+기본 개발 RDB는 `data/scl_catalog.db` SQLite 파일입니다. Supabase/PostgreSQL은 Alembic으로
+스키마를 먼저 준비하고, 데이터 적재·검증 후 실행 계정의 `DATABASE_URL=postgresql+psycopg://...`로
+연결합니다. 운영은 `APP_ENV=production`과 명시적 암호화 키를 설정합니다.
+2026-09-16 기준 이 작업 환경은 기존 Supabase의 `postgres` DB, `app` 스키마로 이전됐으며
+`.env.local`의 `DATABASE_URL`은 API 전용 `scl_app` 계정을 사용합니다. 32개 테이블 48,108행의
+검증을 통과했고 Docker의 테스트 DB 컨테이너·볼륨은 백업 후 제거했습니다.
+[Supabase 이전 실행 절차](docs/supabase-migration-runbook.md)와
+[마이그레이션 계획서](docs/supabase-migration-plan.md)를 참고하세요.
+공개 Worker/D1 통합은 후속 단계이며, DB URL 변경만으로 Worker의 데이터 경로가 바뀌지는 않습니다.
+Supabase에서 아래 수집 명령을 실행할 때는 수집 계정인 `INGEST_DATABASE_URL`을 해당 프로세스의
+`DATABASE_URL`로 주입해야 합니다. 구체적인 환경 설정은 위 실행 절차를 참고하세요.
+공개 검사항목 전체 동기화는 다음 명령으로 실행합니다.
 
 ```bash
 $env:PYTHONPATH="backend"

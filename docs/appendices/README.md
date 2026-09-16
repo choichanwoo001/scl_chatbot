@@ -2,6 +2,7 @@
 
 ## 기술 부록
 
+- [챗봇 답변 가독성 QA](technical/chat-readability-qa-20260916.md)
 - [데스크톱 Design QA](technical/design-qa.md)
 - [공개 데이터 RDB](technical/scl-public-data-rdb.md)
 - [검사 카탈로그 RDB](technical/test-catalog-rdb.md)

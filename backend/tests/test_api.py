@@ -114,12 +114,12 @@ def test_taxonomy_endpoint_rejects_non_positive_id() -> None:
 def test_session_can_be_explicitly_ended() -> None:
     created = client.post("/api/chat", json={"message": "HPV 검사 알려줘", "require_live": False}).json()
     session_id = created["session_id"]
-    assert session_id in orchestrator.sessions._sessions
+    assert orchestrator.sessions.get(session_id)[1].history
 
     response = client.delete(f"/api/sessions/{session_id}")
 
     assert response.status_code == 204
-    assert session_id not in orchestrator.sessions._sessions
+    assert not orchestrator.sessions.get(session_id)[1].history
 
 
 def test_cors_allows_frontend_delete_preflight() -> None:

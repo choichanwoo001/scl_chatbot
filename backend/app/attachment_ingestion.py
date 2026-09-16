@@ -662,8 +662,18 @@ class AttachmentIngestionService:
         return chunks
 
     def _store(self, attachment_id: int, digest: str | None, result: ExtractionResult) -> AttachmentContent:
-        text = clean_text("\n".join(section.text for section in result.sections)) or None
-        chunks = self._chunk_sections(result.sections)
+        # Extractors can emit NUL, which PostgreSQL text cannot store. Preserve
+        # the original downloaded file; use a visible replacement in extracted text.
+        sections = [
+            ExtractedSection(
+                section.text.replace("\x00", "\ufffd"),
+                section.page_number,
+                section.label.replace("\x00", "\ufffd") if section.label else section.label,
+            )
+            for section in result.sections
+        ]
+        text = clean_text("\n".join(section.text for section in sections)) or None
+        chunks = self._chunk_sections(sections)
         with SessionLocal.begin() as session:
             item = session.scalar(
                 select(AttachmentContent).where(AttachmentContent.attachment_id == attachment_id)
@@ -680,7 +690,7 @@ class AttachmentIngestionService:
             item.extractor = result.extractor
             item.extracted_text = text
             item.normalized_text = normalize_search_text(text or "") or None
-            item.error_message = result.error
+            item.error_message = result.error.replace("\x00", "\ufffd") if result.error else result.error
             item.char_count = len(text or "")
             item.page_count = (
                 max((section.page_number or 0 for section in result.sections), default=0) or None

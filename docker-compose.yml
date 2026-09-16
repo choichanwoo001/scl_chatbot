@@ -6,9 +6,20 @@ services:
     env_file:
       - path: .env
         required: false
+      - path: .env.local
+        required: false
+    # Docker runs the API against the external Supabase database.
+    # Production validation rejects the default SQLite URL and missing encryption key.
+    environment:
+      APP_ENV: production
+      SEED_DEMO_ON_EMPTY: "false"
+      MIGRATION_DATABASE_URL: ""
+      INGEST_DATABASE_URL: ""
+      SUPABASE_DB_PASSWORD: ""
     ports:
       - "8000:8000"
     volumes:
+      # Attachment files, indexes, and preserved source backups.
       - ./data:/app/data
 
   frontend:

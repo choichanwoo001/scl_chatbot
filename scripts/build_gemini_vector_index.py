@@ -5,51 +5,53 @@ import base64
 import hashlib
 import json
 import math
-import sqlite3
+import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
 import httpx
-from dotenv import dotenv_values
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+
+from app.config import settings
+from app.export_database import export_connection
 
 ROOT = Path(__file__).resolve().parents[1]
-DATABASE = ROOT / "data" / "scl_catalog.db"
-OUTPUT = ROOT / "data" / "gemini_vector_index.json"
+OUTPUT = Path(settings.gemini_vector_index_path)
+if not OUTPUT.is_absolute():
+    OUTPUT = ROOT / OUTPUT
 
 
 def load_records() -> list[dict[str, str]]:
-    connection = sqlite3.connect(DATABASE)
-    connection.row_factory = sqlite3.Row
-    rows = connection.execute(
-        """
+    with export_connection() as connection:
+        rows = connection.execute(
+            """
         SELECT 'document' AS entity_type, id, title,
                COALESCE(summary, substr(body_text, 1, 2400), '') AS snippet,
                content_hash
         FROM public_documents
         WHERE status = 'active'
         UNION ALL
-        SELECT 'attachment', da.id, da.file_name, substr(ac.extracted_text, 1, 2400),
+        SELECT 'attachment', da.id, da.file_name, ac.extracted_text,
                COALESCE(ac.content_hash, da.content_hash, '')
         FROM document_attachments da
         JOIN attachment_contents ac ON ac.attachment_id = da.id
         JOIN public_documents pd ON pd.id = da.document_id
         WHERE da.status = 'active' AND pd.status = 'active'
-          AND ac.extraction_status = 'extracted' AND length(trim(ac.extracted_text)) > 0
+          AND ac.extraction_status = 'extracted' AND length(trim(ac.normalized_text)) > 0
         ORDER BY entity_type, id DESC
         """
-    ).fetchall()
-    connection.close()
+        ).fetchall()
     records: list[dict[str, str]] = []
     for row in rows:
         entity_type = str(row["entity_type"])
         entity_id = str(row["id"])
         title = str(row["title"] or "").strip()
-        snippet = " ".join(str(row["snippet"] or "").split())
-        content_hash = str(row["content_hash"] or "") or hashlib.sha256(
-            f"{title}\n{snippet}".encode("utf-8")
-        ).hexdigest()
+        snippet = " ".join(str(row["snippet"] or "").replace("\x00", "\ufffd")[:2400].split())
+        content_hash = (
+            str(row["content_hash"] or "") or hashlib.sha256(f"{title}\n{snippet}".encode()).hexdigest()
+        )
         records.append(
             {
                 "ref": f"{entity_type}:{entity_id}",
@@ -59,6 +61,9 @@ def load_records() -> list[dict[str, str]]:
                 "snippet": snippet[:900],
                 "embedding_text": f"title: {title} | text: {snippet[:2400]}",
                 "content_hash": content_hash,
+                "embedding_hash": hashlib.sha256(
+                    f"title: {title} | text: {snippet[:2400]}".encode()
+                ).hexdigest(),
             }
         )
     return records
@@ -118,12 +123,11 @@ def main() -> None:
         help="Newest records to embed per entity type; 0 indexes the full corpus.",
     )
     args = parser.parse_args()
-    config = {**dotenv_values(ROOT / ".env"), **dotenv_values(ROOT / ".env.local")}
-    key = config.get("GEMINI_API_KEY")
+    key = settings.gemini_api_key
     if not key:
-        raise SystemExit("GEMINI_API_KEY is required in .env.local")
-    model = str(config.get("GEMINI_EMBEDDING_MODEL") or "gemini-embedding-2")
-    dimensions = int(config.get("GEMINI_EMBEDDING_DIMENSIONS") or 128)
+        raise SystemExit("GEMINI_API_KEY is required")
+    model = settings.gemini_embedding_model
+    dimensions = settings.gemini_embedding_dimensions
     records = load_records()
     if args.max_per_type > 0:
         selected: list[dict[str, str]] = []
@@ -145,7 +149,12 @@ def main() -> None:
     pending: list[dict[str, str]] = []
     for record in records:
         prior = existing.get(record["ref"])
-        if prior and prior.get("content_hash") == record["content_hash"] and prior.get("vector"):
+        if (
+            prior
+            and prior.get("content_hash") == record["content_hash"]
+            and prior.get("embedding_hash") == record["embedding_hash"]
+            and prior.get("vector")
+        ):
             completed[record["ref"]] = prior
         else:
             pending.append(record)

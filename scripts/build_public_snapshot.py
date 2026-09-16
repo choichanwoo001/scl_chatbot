@@ -4,16 +4,30 @@ import gzip
 import os
 import shutil
 import sqlite3
+import sys
 from contextlib import closing
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "backend"))
+
 RUNTIME_DB = ROOT / "data" / "scl_catalog.db"
 SNAPSHOT_GZ = ROOT / "data" / "scl_catalog.snapshot.db.gz"
-PRIVATE_TABLES = ("handoff_requests", "chat_feedback", "faq_candidates")
+PRIVATE_TABLES = ("handoff_requests", "chat_feedback", "faq_candidates", "chat_sessions")
 
 
 def main() -> None:
+    from app.config import settings
+
+    if not settings.database_url.startswith("sqlite"):
+        raise SystemExit(
+            "This builder only publishes the local SQLite development snapshot. It must not export a stale local DB when DATABASE_URL is PostgreSQL."
+        )
+    from sqlalchemy.engine import make_url
+
+    configured_path = make_url(settings.database_url).database
+    if not configured_path or Path(configured_path).resolve() != RUNTIME_DB.resolve():
+        raise SystemExit("This builder requires the default local SQLite catalog path")
     if not RUNTIME_DB.is_file():
         raise SystemExit(f"Runtime database not found: {RUNTIME_DB}")
 

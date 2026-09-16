@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test:unit": "node --test tests/chat-session.test.mjs tests/chat-state.test.mjs tests/structured-text.test.mjs",
-    "test:sites": "npm run build && node --test tests/sites-worker.test.mjs"
+    "test:sites": "npm run build && node --test tests/sites-worker.test.mjs tests/api-contract.test.mjs"
   },
   "dependencies": {
     "@openai/sites-vite-plugin": "^0.2.0",

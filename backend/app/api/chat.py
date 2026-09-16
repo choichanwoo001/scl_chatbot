@@ -10,7 +10,9 @@ router = APIRouter()
 @router.get("/health", response_model=HealthResponse)
 async def health(services: AppServices = Depends(get_services)) -> HealthResponse:
     settings = services.settings
-    index_status = vector_index_status(settings.openai_vector_store_id, settings)
+    index_status = vector_index_status(
+        settings.openai_vector_store_id, settings, session_factory=services.catalog.session_factory
+    )
     index_counts = index_status.get("counts", {})
     return HealthResponse(
         mode=settings.mode,

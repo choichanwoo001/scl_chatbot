@@ -625,3 +625,15 @@ class VectorIndexItem(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
     )
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+    __table_args__ = (
+        Index("ix_chat_sessions_expires_at", "expires_at"),
+        Index("ix_chat_sessions_updated_at", "updated_at"),
+    )
+    session_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    state_json: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

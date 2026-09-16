@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import sys
 
+from app.config import settings
 from app.database import SessionLocal, engine
+from app.database_transfer import TransferError, verify_constraints
 from sqlalchemy import text
 
 EXPECTED = {
@@ -115,6 +117,11 @@ def main() -> None:
             if engine.dialect.name == "sqlite"
             else []
         )
+        if engine.dialect.name == "postgresql":
+            try:
+                verify_constraints(session.connection(), settings.database_schema)
+            except TransferError as error:
+                failures.append(str(error))
         if fk_violations:
             failures.append(f"foreign key violations: {len(fk_violations)}")
         stats = {

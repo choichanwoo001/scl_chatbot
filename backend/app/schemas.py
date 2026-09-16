@@ -235,3 +235,11 @@ class ResultDetail(BaseModel):
     status: Literal["received", "processing", "reported", "corrected", "cancelled"]
     fields: list[ResultField] = Field(default_factory=list, max_length=200)
     notice: str = Field(max_length=1000)
+
+
+class TaxonomyRelationInfo(BaseModel):
+    parent_id: int
+    parent_name: str
+    child_id: int
+    child_name: str
+    relation_type: str

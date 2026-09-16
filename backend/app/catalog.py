@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import threading
 from dataclasses import dataclass
+from datetime import UTC
 from pathlib import Path
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
-from .config import settings
+from .config import Settings, settings
 from .database import SessionLocal, init_database
 from .models import (
     DataSource,
@@ -17,6 +18,7 @@ from .models import (
     Specimen,
     Test,
     TestAlias,
+    TestBillingCode,
     TestPublicDetail,
     TestVariant,
     utcnow,
@@ -61,7 +63,7 @@ SPECIMEN_GROUP_TERMS = {
 
 
 @dataclass(frozen=True)
-class _CatalogSearchRow:
+class CatalogSearchRow:
     info: TestInfo
     name: str
     aliases: tuple[str, ...]
@@ -78,18 +80,20 @@ class _CatalogSearchRow:
 
 
 class DatabaseCatalog:
-    def __init__(self) -> None:
+    def __init__(self, app_settings: Settings = settings, session_factory=None) -> None:
+        self.session_factory = session_factory or SessionLocal
+        self.settings = app_settings
         self._search_cache_lock = threading.Lock()
         self._search_cache_signature: tuple[object, ...] | None = None
-        self._search_cache: tuple[_CatalogSearchRow, ...] = ()
-        init_database()
-        if settings.seed_demo_on_empty:
+        self._search_cache: tuple[CatalogSearchRow, ...] = ()
+        init_database(self.session_factory.kw["bind"])
+        if self.settings.seed_demo_on_empty:
             self._seed_demo_if_empty()
 
     def get(self, code: str | None, variant_key: str | None = None) -> TestInfo | None:
         if not code and not variant_key:
             return None
-        with SessionLocal() as session:
+        with self.session_factory() as session:
             statement = self._base_statement()
             if variant_key:
                 statement = statement.where(TestVariant.source_row_key == variant_key)
@@ -110,7 +114,7 @@ class DatabaseCatalog:
         if not normalized_query:
             return []
 
-        rows = self._search_rows()
+        rows = self.search_rows()
 
         ranked: list[tuple[int, str, TestInfo]] = []
         for row in rows:
@@ -167,14 +171,15 @@ class DatabaseCatalog:
         ranked.sort(key=lambda item: (-item[0], item[1], item[2].variant_key or item[2].code))
         return [info for _, _, info in ranked[:limit]]
 
-    def _search_rows(self) -> tuple[_CatalogSearchRow, ...]:
-        with SessionLocal() as session:
+    def search_rows(self) -> tuple[CatalogSearchRow, ...]:
+        with self.session_factory() as session:
             source_key = self._preferred_source_key(session)
-            count, max_id, latest_seen = session.execute(
+            count, max_id, latest_seen, latest_updated = session.execute(
                 select(
                     func.count(TestVariant.id),
                     func.max(TestVariant.id),
                     func.max(TestVariant.last_seen_at),
+                    func.max(TestVariant.updated_at),
                 )
                 .join(TestVariant.test)
                 .join(Test.data_source)
@@ -192,6 +197,7 @@ class DatabaseCatalog:
                 int(count or 0),
                 int(max_id or 0),
                 latest_seen,
+                latest_updated,
                 int(detail_count or 0),
                 detail_latest,
             )
@@ -207,7 +213,7 @@ class DatabaseCatalog:
                     TestVariant.status == "active",
                 )
                 variants = list(session.scalars(statement).unique())
-                rows: list[_CatalogSearchRow] = []
+                rows: list[CatalogSearchRow] = []
                 for variant in variants:
                     test = variant.test
                     aliases = tuple(normalize_search_text(item.alias) for item in test.aliases)
@@ -222,19 +228,19 @@ class DatabaseCatalog:
                         )
                     )
                     method = normalize_search_text(variant.method.name if variant.method else "")
-                    billing = normalize_search_text(variant.billing_code_text)
+                    # Normalized links are authoritative; raw text remains source provenance.
+                    linked_codes = [link.billing_code.code for link in variant.billing_codes]
+                    billing = normalize_search_text(
+                        " ".join(linked_codes) if linked_codes else variant.billing_code_text
+                    )
                     schedule = normalize_search_text(variant.schedule_text)
                     tat = normalize_search_text(variant.tat_text)
                     code = test.source_test_code.casefold()
                     detail_text = normalize_search_text(
                         variant.public_detail.normalized_text if variant.public_detail else ""
                     )
-                    detail_fields = (
-                        variant.public_detail.fields_json if variant.public_detail else {}
-                    )
-                    detail_precautions = normalize_search_text(
-                        detail_fields.get("채취방법 및 주의사항", "")
-                    )
+                    detail_fields = variant.public_detail.fields_json if variant.public_detail else {}
+                    detail_precautions = normalize_search_text(detail_fields.get("채취방법 및 주의사항", ""))
                     detail_primary = normalize_search_text(
                         " ".join(
                             [
@@ -244,7 +250,7 @@ class DatabaseCatalog:
                         )
                     )
                     rows.append(
-                        _CatalogSearchRow(
+                        CatalogSearchRow(
                             info=self._to_info(variant),
                             name=name,
                             aliases=aliases,
@@ -301,7 +307,7 @@ class DatabaseCatalog:
         )
 
     def status(self) -> dict[str, object]:
-        with SessionLocal() as session:
+        with self.session_factory() as session:
             source_key = self._preferred_source_key(session)
             test_count = (
                 session.scalar(
@@ -343,7 +349,13 @@ class DatabaseCatalog:
                 "variants": variant_count,
                 "details": detail_count,
                 "last_sync_at": (
-                    last_run.finished_at.isoformat() if last_run and last_run.finished_at else None
+                    (
+                        last_run.finished_at.replace(tzinfo=UTC)
+                        if last_run.finished_at.tzinfo is None
+                        else last_run.finished_at.astimezone(UTC)
+                    ).isoformat()
+                    if last_run and last_run.finished_at
+                    else None
                 ),
                 "last_sync_status": last_run.status if last_run else None,
             }
@@ -360,6 +372,7 @@ class DatabaseCatalog:
                 joinedload(TestVariant.specimen),
                 joinedload(TestVariant.test).selectinload(Test.aliases),
                 joinedload(TestVariant.public_detail),
+                selectinload(TestVariant.billing_codes).joinedload(TestBillingCode.billing_code),
             )
         )
 
@@ -400,10 +413,15 @@ class DatabaseCatalog:
     @staticmethod
     def _public_details(variant: TestVariant) -> dict[str, str]:
         detail = variant.public_detail
-        if detail is None or detail.fetch_status != "completed":
-            return {}
-        values = dict(detail.fields_json)
-        values.update({f"용기 {key}": value for key, value in detail.container_json.items()})
+        values = {}
+        if detail is not None and detail.fetch_status == "completed":
+            values = dict(detail.fields_json)
+            values.update({f"용기 {key}": value for key, value in detail.container_json.items()})
+        codes = sorted({link.billing_code.code for link in variant.billing_codes})
+        if codes:
+            values["급여코드"] = ", ".join(codes)
+        elif not values.get("급여코드") and variant.billing_code_text:
+            values["급여코드"] = variant.billing_code_text
         return values
 
     @staticmethod
@@ -422,7 +440,7 @@ class DatabaseCatalog:
         return selected
 
     def _seed_demo_if_empty(self) -> None:
-        with SessionLocal.begin() as session:
+        with self.session_factory.begin() as session:
             if session.scalar(select(func.count(Test.id))):
                 return
             source = DataSource(

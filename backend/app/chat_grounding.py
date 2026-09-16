@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from .catalog import DatabaseCatalog
+from .chat_contracts import ModelPlan
 from .guardrails import safe_citation_url
-from .openai_gateway import ModelPlan
 from .public_search import PublicDataSearch, SearchHit
 from .schemas import Citation, Reply, TestInfo
 
@@ -113,8 +113,7 @@ class GroundedReplyBuilder:
         for item in trusted_tests:
             code_matches = not plan.matched_test_code or item.code == plan.matched_test_code
             variant_matches = (
-                not plan.matched_test_variant_key
-                or item.variant_key == plan.matched_test_variant_key
+                not plan.matched_test_variant_key or item.variant_key == plan.matched_test_variant_key
             )
             if code_matches and variant_matches:
                 return item
@@ -135,11 +134,7 @@ class GroundedReplyBuilder:
         ):
             return
         hits = (
-            [
-                hit
-                for hit in trusted_hits
-                if hit.entity_type in {"document", "attachment", "faq"}
-            ][:3]
+            [hit for hit in trusted_hits if hit.entity_type in {"document", "attachment", "faq"}][:3]
             if trusted_hits is not None
             else self.public_search.search(query, {"document", "attachment", "faq"}, 3)
         )
@@ -181,9 +176,7 @@ class GroundedReplyBuilder:
         plan: ModelPlan,
         trusted_tests: list[TestInfo] | None,
     ) -> list[TestInfo]:
-        trusted_by_variant = {
-            item.variant_key: item for item in (trusted_tests or []) if item.variant_key
-        }
+        trusted_by_variant = {item.variant_key: item for item in (trusted_tests or []) if item.variant_key}
         selected: list[TestInfo] = []
         for variant_key in plan.supporting_test_variant_keys:
             item = (
@@ -191,8 +184,10 @@ class GroundedReplyBuilder:
                 if trusted_tests is not None
                 else self.catalog.get(None, variant_key)
             )
-            if item and item.public_details and all(
-                existing.variant_key != item.variant_key for existing in selected
+            if (
+                item
+                and item.public_details
+                and all(existing.variant_key != item.variant_key for existing in selected)
             ):
                 selected.append(item)
         return selected[:4]

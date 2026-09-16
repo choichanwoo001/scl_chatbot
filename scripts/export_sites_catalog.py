@@ -1,18 +1,23 @@
 from __future__ import annotations
 
 import json
-import sqlite3
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+
+from app.config import settings
+from app.export_database import export_connection
 
 ROOT = Path(__file__).resolve().parents[1]
-DATABASE = ROOT / "data" / "scl_catalog.db"
 OUTPUT = ROOT / "frontend" / "worker" / "catalog-data.js"
-VECTOR_INDEX = ROOT / "data" / "gemini_vector_index.json"
+VECTOR_INDEX = Path(settings.gemini_vector_index_path)
+if not VECTOR_INDEX.is_absolute():
+    VECTOR_INDEX = ROOT / VECTOR_INDEX
 
 
-def compact_details(raw: str | None) -> dict[str, str]:
-    values = json.loads(raw or "{}")
+def compact_details(raw: str | dict | None) -> dict[str, str]:
+    values = raw if isinstance(raw, dict) else json.loads(raw or "{}")
     preferred = (
         "임상적 의의",
         "채취방법 및 주의사항",
@@ -28,13 +33,11 @@ def compact_details(raw: str | None) -> dict[str, str]:
     return result
 
 
-def main() -> None:
-    connection = sqlite3.connect(DATABASE)
-    connection.row_factory = sqlite3.Row
+def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
 
     aliases: dict[int, list[str]] = {}
     for row in connection.execute(
-        "SELECT test_id, alias FROM test_aliases WHERE verified = 1 ORDER BY id"
+        "SELECT test_id, alias FROM test_aliases WHERE verified = true ORDER BY id"
     ):
         aliases.setdefault(row["test_id"], []).append(row["alias"])
 
@@ -78,8 +81,14 @@ def main() -> None:
         item["search"] = " ".join(
             str(value or "")
             for value in (
-                item["code"], item["name"], *item["aliases"], item["specimen"],
-                item["container"], item["method"], item["schedule"], item["tat"],
+                item["code"],
+                item["name"],
+                *item["aliases"],
+                item["specimen"],
+                item["container"],
+                item["method"],
+                item["schedule"],
+                item["tat"],
                 *item["public_details"].values(),
             )
         ).casefold()
@@ -109,12 +118,12 @@ def main() -> None:
         FROM public_documents WHERE status = 'active'
         UNION ALL
         SELECT 'attachment', da.id, da.file_name,
-               substr(ac.extracted_text, 1, 900), pd.source_url, ac.extracted_at
+               ac.extracted_text, pd.source_url, ac.extracted_at
         FROM document_attachments da
         JOIN attachment_contents ac ON ac.attachment_id = da.id
         JOIN public_documents pd ON pd.id = da.document_id
         WHERE da.status = 'active' AND pd.status = 'active'
-          AND ac.extraction_status = 'extracted' AND length(trim(ac.extracted_text)) > 0
+          AND ac.extraction_status = 'extracted' AND length(trim(ac.normalized_text)) > 0
         ORDER BY entity_type, id
         """
     ):
@@ -122,7 +131,7 @@ def main() -> None:
             "ref": f"{row['entity_type']}:{row['id']}",
             "entity_type": row["entity_type"],
             "title": row["title"],
-            "snippet": (row["snippet"] or "")[:900],
+            "snippet": (row["snippet"] or "").replace("\x00", "\ufffd")[:900],
             "source_url": row["source_url"],
             "updated_at": str(row["updated_at"] or "")[:10],
         }
@@ -132,12 +141,17 @@ def main() -> None:
         public_items.append(item)
 
     payload = (
-        "// Generated from data/scl_catalog.db by scripts/export_sites_catalog.py.\n"
+        "// Generated from the configured DATABASE_URL by scripts/export_sites_catalog.py.\n"
         f"export const catalog = {json.dumps(catalog, ensure_ascii=False, separators=(',', ':'))};\n"
         f"export const publicItems = {json.dumps(public_items, ensure_ascii=False, separators=(',', ':'))};\n"
     )
     OUTPUT.write_text(payload, encoding="utf-8")
     print(f"Exported {len(catalog)} test variants and {len(public_items)} public records to {OUTPUT}")
+
+
+def main() -> None:
+    with export_connection() as connection:
+        export_catalog(connection)
 
 
 if __name__ == "__main__":

@@ -50,12 +50,15 @@ class DisabledVectorSearchProvider:
 
 
 class OpenAIVectorSearchProvider:
-    def __init__(self, app_settings: Settings = settings, client: OpenAI | None = None) -> None:
+    def __init__(
+        self, app_settings: Settings = settings, client: OpenAI | None = None, *, session_factory=None
+    ) -> None:
         if not app_settings.openai_api_key:
             raise ValueError("OPENAI_API_KEY is required for vector search")
         if not app_settings.openai_vector_store_id:
             raise ValueError("OPENAI_VECTOR_STORE_ID is required for vector search")
-        init_database()
+        self.session_factory = session_factory or SessionLocal
+        init_database(self.session_factory.kw["bind"])
         self.settings = app_settings
         self.client = client or OpenAI(
             api_key=app_settings.openai_api_key,
@@ -85,7 +88,7 @@ class OpenAIVectorSearchProvider:
         if not rows:
             return []
         file_ids = [row.file_id for row in rows]
-        with SessionLocal() as session:
+        with self.session_factory() as session:
             mappings = {
                 item.openai_file_id: item
                 for item in session.scalars(
@@ -162,11 +165,7 @@ class GeminiVectorSearchProvider:
             endpoint,
             headers={"x-goog-api-key": self.settings.gemini_api_key},
             json={
-                "content": {
-                    "parts": [
-                        {"text": f"task: search result | query: {query.strip()}"}
-                    ]
-                },
+                "content": {"parts": [{"text": f"task: search result | query: {query.strip()}"}]},
                 "outputDimensionality": self.settings.gemini_embedding_dimensions,
             },
         )
@@ -211,9 +210,11 @@ class GeminiVectorSearchProvider:
 def build_vector_search_provider(
     app_settings: Settings = settings,
     client: Any | None = None,
+    *,
+    session_factory=None,
 ) -> VectorSearchProvider:
     if not app_settings.vector_search_configured:
         return DisabledVectorSearchProvider()
     if app_settings.llm_provider == "gemini":
         return GeminiVectorSearchProvider(app_settings, client)
-    return OpenAIVectorSearchProvider(app_settings, client)
+    return OpenAIVectorSearchProvider(app_settings, client, session_factory=session_factory)

@@ -1,5 +1,6 @@
 .venv
 .env
+.env.local
 backend/.env
 frontend/.env*
 .git
@@ -15,5 +16,6 @@ data/scl_catalog.db-*
 data/scl_catalog.db.tmp
 data/scl_catalog.snapshot.db
 data/scl_catalog.snapshot.db-*
+data/scl_catalog.snapshot.db.gz
 tmp
 *.log
