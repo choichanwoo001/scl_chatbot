@@ -229,6 +229,59 @@ test("the packaged catalog resolves D185000HZ only to its ALT billing-code match
   assert.ok(body.reply.choices.every((choice) => !choice.includes("40500")));
 });
 
+test("filters remembered code candidates by field and carries the term into a short follow-up", async () => {
+  const sessionId = "field-followup-session";
+  const first = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "11380 코드 검사 찾아줘", require_live: false }),
+  }), apiEnv);
+  assert.equal((await first.json()).reply.kind, "choices");
+
+  const correction = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "검사명에 random 들어간거?", require_live: false }),
+  }), apiEnv);
+  const correctionBody = await correction.json();
+  assert.equal(correctionBody.reply.kind, "test");
+  assert.equal(correctionBody.reply.test.variant_key, "11380:400");
+  assert.match(correctionBody.reply.text, /검사명에는 'random'.*검체명에는 포함/);
+
+  const followup = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "검체명에?", require_live: false }),
+  }), apiEnv);
+  const followupBody = await followup.json();
+  assert.equal(followupBody.reply.kind, "test");
+  assert.equal(followupBody.reply.test.variant_key, "11380:400");
+  assert.match(followupBody.reply.text, /검체명에 'random'.*포함/);
+});
+
+test("understands implicit specimen filters and ordinal references within remembered candidates", async () => {
+  const sessionId = "implicit-followup-session";
+  await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "11380 코드 검사 찾아줘", require_live: false }),
+  }), apiEnv);
+
+  const serum = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "serum인거", require_live: false }),
+  }), apiEnv);
+  assert.equal((await serum.json()).reply.test.variant_key, "11380:100");
+
+  const second = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "두 번째 보여줘", require_live: false }),
+  }), apiEnv);
+  assert.equal((await second.json()).reply.test.variant_key, "11380:100");
+});
+
 test("falls back from a missing SCL code to an exact billing-code match", async () => {
   const originalFetch = globalThis.fetch;
   const billingTest = {

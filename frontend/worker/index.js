@@ -18,6 +18,7 @@ const FOLLOWUP_INTENT = /(그거|그 검사|그 항목|해당 검사|앞의 검�
 const SCL_OPERATIONAL_INTENT = /(scl|검사\s*코드|검체|용기|검사일|소요일|의뢰|공문|지점|센터|연락처|전화|주소|검사\s*결과|결과\s*조회)/i;
 const STOP_WORDS = new Set(["검사", "알려", "주세요", "궁금", "대한", "관련", "정보"]);
 const CODE_PATTERN = /(?<![A-Za-z0-9])(?:[A-Za-z]\d{6}[A-Za-z]{2}|[A-Za-z]\d{4}|\d[A-Za-z]\d{3}|\d{5})(?![A-Za-z0-9])/gi;
+const FILTER_TOKEN_STOP_WORDS = new Set(["scl", "code", "test", "name", "specimen", "method"]);
 const DEFAULT_EXTERNAL_DOMAINS = [
   "scllab.co.kr", "kdca.go.kr", "mfds.go.kr", "hira.or.kr",
   "pubmed.ncbi.nlm.nih.gov", "clinicaltrials.gov", "who.int", "cdc.gov", "fda.gov",
@@ -101,6 +102,138 @@ function termsFor(query) {
 
 function codeCandidates(query) {
   return [...new Set((String(query || "").normalize("NFKC").match(CODE_PATTERN) || []).map((code) => code.toUpperCase()))];
+}
+
+function candidateFilter(query, previousFilter = null) {
+  const text = String(query || "").normalize("NFKC").trim();
+  let field = null;
+  if (/(?:검사\s*명|검사\s*이름)/i.test(text)) field = "name";
+  else if (/(?:검체\s*명|검체)/i.test(text)) field = "specimen";
+  else if (/(?:용기\s*명|용기)/i.test(text)) field = "container";
+  else if (/(?:검사\s*방법|방법)/i.test(text)) field = "method";
+  else if (/(?:검사\s*코드|SCL\s*코드)/i.test(text)) field = "code";
+  const quoted = text.match(/["'“”‘’]([^"'“”‘’]{1,60})["'“”‘’]/)?.[1]?.trim();
+  const latin = (text.match(/[A-Za-z][A-Za-z0-9._-]*/g) || [])
+    .find((token) => !FILTER_TOKEN_STOP_WORDS.has(token.toLowerCase()));
+  const korean = text.match(/(?:^|\s)([가-힣]{2,20})(?:인\s*(?:거|것)|들어|포함)/)?.[1]
+    ?.replace(/^(?:검사명|검체명|검체|용기|방법)/, "");
+  const term = quoted || latin || korean || (field ? previousFilter?.term : null) || null;
+  return term ? { field, term } : null;
+}
+
+const CANDIDATE_FIELDS = {
+  name: { label: "검사명", value: (item) => item.name },
+  specimen: { label: "검체명", value: (item) => item.specimen },
+  container: { label: "용기", value: (item) => item.container },
+  method: { label: "검사방법", value: (item) => item.method },
+  code: { label: "검사코드", value: (item) => item.code },
+};
+
+function candidateFilterReply(items, filter) {
+  const requested = filter.field ? CANDIDATE_FIELDS[filter.field] : null;
+  const aliases = { 혈청: "serum", 소변: "urine", 전혈: "whole blood", 혈장: "plasma", 대변: "stool" };
+  const term = normalize(aliases[filter.term] || filter.term);
+  const matchingFields = (item) => Object.entries(CANDIDATE_FIELDS)
+    .filter(([field, definition]) => (!filter.field || field === filter.field)
+      && normalize(definition.value(item)).includes(term));
+  const matches = items.filter((item) => matchingFields(item).length);
+  if (matches.length === 1) {
+    const matchedLabel = requested?.label || matchingFields(matches[0])[0][1].label;
+    return testReply(
+      matches[0],
+      `${matchedLabel}에 '${filter.term}'이(가) 포함된 항목은 이 검사입니다.`,
+    );
+  }
+  if (matches.length > 1) {
+    return {
+      kind: "choices",
+      text: `${requested?.label || "앞의 후보 정보"}에 '${filter.term}'이(가) 포함된 검사가 여러 개예요. 확인할 항목을 선택해 주세요.`,
+      test: null,
+      choices: matches.slice(0, 4).map((item) => testChoice(item)),
+      citations: [],
+      data_status: "public_database",
+      grounding_status: "grounded_internal",
+      answerability: "partial",
+      claim_coverage: 1,
+      missing_information: [],
+    };
+  }
+
+  const alternate = requested && Object.entries(CANDIDATE_FIELDS)
+    .filter(([field]) => field !== filter.field)
+    .map(([field, definition]) => ({
+      field,
+      label: definition.label,
+      matches: items.filter((item) => normalize(definition.value(item)).includes(term)),
+    }))
+    .find((entry) => entry.matches.length);
+  if (alternate?.matches.length === 1) {
+    return testReply(
+      alternate.matches[0],
+      `${requested.label}에는 '${filter.term}'이(가) 없습니다. ${alternate.label}에는 포함되어 있으며, 해당 항목은 이 검사입니다.`,
+    );
+  }
+  if (alternate?.matches.length > 1) {
+    return {
+      kind: "choices",
+      text: `${requested.label}에는 '${filter.term}'이(가) 없습니다. ${alternate.label}에는 포함된 항목이 여러 개예요.`,
+      test: null,
+      choices: alternate.matches.slice(0, 4).map((item) => testChoice(item)),
+      citations: [],
+      data_status: "public_database",
+      grounding_status: "grounded_internal",
+      answerability: "partial",
+      claim_coverage: 1,
+      missing_information: [],
+    };
+  }
+  return formReply(
+    "text",
+    `앞에서 찾은 검사 후보의 ${requested?.label || "검사 정보"}에는 '${filter.term}'이(가) 없습니다.`,
+  );
+}
+
+function turnaroundUpperDays(value) {
+  const numbers = String(value || "").match(/\d+(?:\.\d+)?/g)?.map(Number) || [];
+  return numbers.length ? Math.max(...numbers) : null;
+}
+
+function contextualCandidateReply(query, items, previousFilter) {
+  const ordinalMatch = String(query).match(/(?:^|\s)(첫|두|세|네|1|2|3|4)\s*번째/);
+  if (ordinalMatch) {
+    const indexes = { 첫: 0, 두: 1, 세: 2, 네: 3, 1: 0, 2: 1, 3: 2, 4: 3 };
+    const item = items[indexes[ordinalMatch[1]]];
+    if (item) return { reply: testReply(item, "앞의 후보에서 선택한 검사입니다."), filter: previousFilter };
+  }
+  if (/(?:가장\s*(?:빠른|짧은)|소요일.{0,8}(?:짧|빠)|제일\s*(?:빠른|짧은))/i.test(query)) {
+    const ranked = items
+      .map((item) => ({ item, days: turnaroundUpperDays(item.tat) }))
+      .filter(({ days }) => days !== null)
+      .sort((left, right) => left.days - right.days);
+    if (ranked.length) {
+      const best = ranked.filter(({ days }) => days === ranked[0].days).map(({ item }) => item);
+      if (best.length === 1) {
+        return { reply: testReply(best[0], "앞의 후보 중 소요일이 가장 짧은 검사입니다."), filter: previousFilter };
+      }
+      return {
+        reply: {
+          kind: "choices",
+          text: "앞의 후보 중 소요일이 가장 짧은 검사가 여러 개예요.",
+          test: null,
+          choices: best.slice(0, 4).map((item) => testChoice(item)),
+          citations: [],
+          data_status: "public_database",
+          grounding_status: "grounded_internal",
+          answerability: "partial",
+          claim_coverage: 1,
+          missing_information: [],
+        },
+        filter: previousFilter,
+      };
+    }
+  }
+  const filter = candidateFilter(query, previousFilter);
+  return filter ? { reply: candidateFilterReply(items, filter), filter } : null;
 }
 
 function normalizedBillingCodes(item) {
@@ -541,8 +674,40 @@ async function handleChat(request, env) {
   if (body.require_live && !env.GEMINI_API_KEY) {
     return detail("실시간 AI 연결이 구성되지 않았습니다.", 503);
   }
-  let lastTest = null;
-  try { lastTest = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
+  let sessionState = null;
+  try { sessionState = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
+  const lastTest = sessionState?.last_test || (sessionState?.code ? sessionState : null);
+  const previousTests = Array.isArray(sessionState?.previous_tests) ? sessionState.previous_tests : [];
+  const contextual = previousTests.length
+    ? contextualCandidateReply(inspection.modelInput, previousTests, sessionState?.last_filter)
+    : null;
+  if (contextual) {
+    const { reply, filter } = contextual;
+    const selectedTest = reply.kind === "test" ? reply.test : lastTest;
+    try {
+      await saveSession(env, sessionId, {
+        last_test: selectedTest,
+        previous_tests: previousTests,
+        last_filter: filter || null,
+      });
+    } catch (error) { console.error("D1 session save failed", error); }
+    return json({
+      session_id: sessionId,
+      displayed_input: inspection.displayed,
+      reply,
+      mode: "deterministic",
+      safety_action: inspection.action,
+      domain: "test",
+      sub_intent: "filter_previous_candidates",
+      requested_action: "filter",
+      requires_authentication: false,
+      needs_handoff: false,
+      medical_review_required: false,
+      response_id: null,
+      catalog_source: "session",
+      timings_ms: { total: Date.now() - started },
+    });
+  }
   let tests = rankTests(inspection.modelInput);
   let publicHits = rankPublic(inspection.modelInput);
   const requestedCodes = codeCandidates(inspection.modelInput);
@@ -613,7 +778,16 @@ async function handleChat(request, env) {
   }
 
   const selectedTest = reply.kind === "test" ? reply.test : lastTest;
-  try { await saveSession(env, sessionId, selectedTest); } catch (error) { console.error("D1 session save failed", error); }
+  const rememberedTests = requestedCodes.length || tests.length
+    ? tests.map(({ item }) => publicTest(item)).slice(0, 12)
+    : previousTests;
+  try {
+    await saveSession(env, sessionId, {
+      last_test: selectedTest,
+      previous_tests: rememberedTests,
+      last_filter: null,
+    });
+  } catch (error) { console.error("D1 session save failed", error); }
   const requiresAuthentication = reply.kind === "result_auth_form" || Boolean(plan?.requires_authentication);
   const needsHandoff = reply.kind === "handoff_form" || Boolean(plan?.needs_handoff);
   return json({
