@@ -6,7 +6,7 @@ from app.secure_workflows import WorkflowService
 
 
 def _service() -> WorkflowService:
-    return WorkflowService(Settings(openai_api_key=None))
+    return WorkflowService(Settings())
 
 
 def test_handoff_is_stored_encrypted_and_returns_receipt() -> None:

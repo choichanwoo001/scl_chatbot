@@ -20,10 +20,10 @@ flowchart LR
     G --> O[Chat Orchestration]
     O --> C[(검사 Catalog RDB 또는 배포 스냅샷)]
     O --> P[공개 데이터 키워드 검색]
-    P -. 선택적 의미 검색 .-> V[(Gemini 로컬 Index 또는 OpenAI Vector Store)]
+    P -. 선택적 의미 검색 .-> V[(Gemini 로컬 Index)]
     V --> T[로컬 ref·공개 상태 검증]
     T --> P
-    O --> M[Gemini 또는 OpenAI Structured Output]
+    O --> M[Gemini 구조화 응답]
     M --> B[정책 강제·Grounded Reply]
     B --> F
     S --> D[(D1 세션·상담·호출량)]
@@ -42,7 +42,7 @@ flowchart LR
    역할이 분리됐지만 FastAPI 구현에서는 순차 실행된다.
 4. 키워드 검색은 항상 실행하며, 활성화된 경우 공개문서·첨부·게시 FAQ에만 의미 검색을 보강한다.
 5. Vector 결과를 로컬 ref와 공개 원문 또는 배포 스냅샷에서 다시 확인한다.
-6. Gemini GenerateContent 또는 OpenAI Responses가 동일한 Structured Output 계약으로 답변 계획을 만든다.
+6. Gemini GenerateContent가 구조화 응답 계약으로 답변 계획을 만든다.
 7. 서버가 최초 검색 후보에서 검증된 참조만 재사용해 카드, 선택지, 출처와 정책 플래그를 구성한다.
 8. 호스팅은 D1, FastAPI는 제한된 메모리 세션에 직전 검사 변형을 유지한다.
 
@@ -52,10 +52,10 @@ flowchart LR
 |---|---|---|---|
 | 검사명·코드·검체·용기·일정·소요일 | RDB | 구조화·키워드 | 검사/변형 키 |
 | 공지·콘텐츠·의뢰서 | RDB | 키워드·본문 | 공개 상태·SCL URL |
-| 문서·첨부·게시 FAQ 의미 검색 | Gemini 로컬 Index 또는 OpenAI Vector Store | 유사도 검색 | 로컬 ref·공개 상태 |
+| 문서·첨부·게시 FAQ 의미 검색 | Gemini 로컬 Index | 유사도 검색 | 로컬 ref·공개 상태 |
 | 위치·메뉴·보존제·분류 | RDB | 구조화 검색 | 활성 레코드 |
 
-모델이 Vector Store를 직접 호출하는 `file_search` 도구는 사용하지 않는다. Worker/FastAPI가
+모델이 벡터 저장소를 직접 호출하는 도구는 사용하지 않는다. Worker/FastAPI가
 검색과 매핑 검증을 통제하고 검증된 스냅샷만 모델 입력에 포함한다.
 
 ## 5. 데이터 저장소
@@ -66,7 +66,7 @@ flowchart LR
 - 공개 원문·추출문: RDB와 로컬 첨부 디렉터리
 - 상담 요청: Fernet 암호화 컬럼
 - 채팅 세션: 호스팅 D1 또는 FastAPI 메모리, 브라우저 탭의 안전한 UI 상태만 `sessionStorage`
-- Vector: 공개 문서 계열의 Gemini 로컬 인덱스 또는 선택적 OpenAI Vector Store
+- Vector: 공개 문서 계열의 Gemini 로컬 인덱스
 
 ## 6. 배포 구조
 
@@ -78,8 +78,8 @@ FastAPI 8000과 Nginx 기반 프런트 8080을 노출한다. 백엔드 이미지
 
 | 장애 | 동작 |
 |---|---|
-| Vector Store 미설정·타임아웃 | RDB 키워드 검색으로 복귀 |
-| Gemini/OpenAI 호출 실패 + `require_live=true` | prepared 답변 없이 HTTP 503 |
+| 벡터 인덱스 미설정·타임아웃 | RDB 키워드 검색으로 복귀 |
+| Gemini 호출 실패 + `require_live=true` | prepared 답변 없이 HTTP 503 |
 | Gemini 호출 실패 + 공개 UI `require_live=false` | 검증된 검색 fallback, `mode=demo_fallback` |
 | 결과 Gateway 미설정 | 인증 제출 시 명시적 실패, mock 결과 미노출 |
 | 공개 참조 불일치 | 모델이 선택한 참조와 답변 폐기 |
@@ -87,7 +87,7 @@ FastAPI 8000과 Nginx 기반 프런트 8080을 노출한다. 백엔드 이미지
 
 ## 8. 신뢰 경계
 
-- 브라우저에는 Gemini/OpenAI 키, 결과 Gateway 비밀, 암호화 키를 넣지 않는다.
+- 브라우저에는 Gemini 키, 결과 Gateway 비밀, 암호화 키를 넣지 않는다.
 - LLM 출력은 데이터베이스 참조가 아니라 신뢰할 수 없는 제안으로 취급한다.
 - 개인 결과 인증정보는 LLM provider와 로컬 DB에 저장하지 않는다.
 - 공개 출처 링크는 SCL HTTPS 도메인만 허용한다.

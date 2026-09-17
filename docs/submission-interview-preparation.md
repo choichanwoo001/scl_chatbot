@@ -53,12 +53,12 @@
 
 - React/Vite 기반 SCL 홈페이지 재현 화면과 432px 우측 챗봇
 - 공개 호스팅용 Sites Worker·D1과 로컬/Docker용 FastAPI API
-- Gemini GenerateContent와 OpenAI Responses의 공통 Structured Output 라우팅
-- 로컬 입력 방어, Gemini 안전 필터와 선택적 OpenAI Moderation
+- Gemini GenerateContent 기반 구조화 응답 라우팅
+- 로컬 입력 방어와 Gemini 안전 필터
 - SCL 공개 검사 카탈로그와 상세 페이지 RDB
 - 공문, 콘텐츠, 위치, 메뉴, 용기, 보존제, 분류 통합 검색
 - PDF·Office·HWP·ZIP 첨부 추출과 한국어/영어 로컬 OCR
-- 공개 문서 대상 Gemini 로컬 Vector Index와 선택적 OpenAI Vector Store 하이브리드 검색
+- 공개 문서 대상 Gemini 로컬 Vector Index 하이브리드 검색
 - 상담 요청 암호화 저장, 피드백·FAQ 후보 관리
 - 개인 결과용 `unconfigured`/`mock`/`http` Provider 추상화
 - Docker Compose, GitLab CI, 상태 API, 검증·평가 스크립트
@@ -93,7 +93,7 @@
 | 프런트 | React 19, Vite 6 | 시연 UI와 상태 흐름을 빠르게 분리하고 정적 배포 가능 |
 | 백엔드 | FastAPI, Pydantic 2 | 비동기 API, 명시적 스키마, 자동 OpenAPI 문서 |
 | 데이터 | SQLAlchemy 2, SQLite/PostgreSQL | 제출물 재현성은 SQLite, 운영 확장은 PostgreSQL |
-| LLM | Gemini GenerateContent / OpenAI Responses | 공통 Structured Output, provider별 안전 필터 |
+| LLM | Gemini GenerateContent | 구조화 응답과 안전 필터 |
 | 검색 | 규칙 기반 lexical + 선택적 Vector | 정확한 구조화 사실과 의미 검색을 분리 |
 | OCR | Tesseract `kor+eng` | 공개 첨부를 외부 OCR 서비스로 보내지 않음 |
 | 암호화 | Fernet | 상담 폼 민감 필드의 애플리케이션 레벨 암호화 |
@@ -111,8 +111,8 @@ flowchart LR
     O --> C[(검사 Catalog RDB)]
     O --> P[공개 데이터 검색]
     P --> R[(문서·첨부 RDB)]
-    P -. 선택적 .-> V[(Gemini 로컬 Index 또는 OpenAI Vector Store)]
-    O --> M[Gemini 또는 OpenAI Structured Output]
+    P -. 선택적 .-> V[(Gemini 로컬 Index)]
+    O --> M[Gemini 구조화 응답]
     M --> B[서버 정책·Grounded Reply Builder]
     B --> F
     A --> W[상담·피드백 Workflow]
@@ -177,11 +177,9 @@ FastAPI는 개인정보 패턴을 마스킹한 뒤 모델로 보내지 않고 �
 ### 6.4 안전 필터와 LLM 호출
 
 - Gemini는 GenerateContent의 기본 prompt·response 안전 필터를 적용한다.
-- OpenAI provider는 Responses API의 입·출력 moderation을 적용한다.
 - 로컬 PII·Prompt Injection·욕설·반복 입력 검사는 provider 호출 전에 공통 적용한다.
 - 모델은 자유 JSON이 아니라 `ModelPlan` Pydantic 스키마로 응답한다.
 - `domain`과 `sub_intent` 조합이 틀리면 validation error가 발생하고 한 번 교정 재시도한다.
-- OpenAI 요청은 `store=false`, verbosity low, reasoning effort low가 기본이다.
 
 ### 6.5 서버 정책 강제
 
@@ -276,10 +274,9 @@ FastAPI는 개인정보 패턴을 마스킹한 뒤 모델로 보내지 않고 �
 Vector 대상은 공개 문서, 추출 완료 첨부, 게시된 FAQ뿐이다.
 
 - Gemini 경로는 `gemini-embedding-2`로 만든 128차원 로컬 인덱스를 서버가 검색한다.
-- OpenAI 경로를 선택하면 Vector Store Search API를 백엔드가 직접 호출한다.
 - 모델의 직접 `file_search` 도구는 사용하지 않는다.
 - 최소 점수 아래 결과는 제거한다.
-- provider 결과의 ref 또는 `openai_file_id`가 로컬 공개 매핑과 일치해야 한다.
+- provider 결과의 ref가 로컬 공개 매핑과 일치해야 한다.
 - 최종 ref를 RDB 또는 배포 스냅샷에서 다시 조회해 active/public 상태인지 확인한다.
 - lexical과 vector 결과는 reciprocal-rank 성격의 점수로 결합한다.
 - shadow mode에서는 Vector를 호출하고 관측하지만 기존 lexical 순위를 그대로 반환한다.
@@ -289,7 +286,6 @@ Vector 대상은 공개 문서, 추출 완료 첨부, 게시된 FAQ뿐이다.
 
 - Gemini 로컬 인덱스 400건을 생성해 배포하며 `.env.example`은 Vector를 활성화한다.
 - 환경변수 미설정 코드 기본값은 비활성이고, 실패 시 lexical/RDB 검색으로 복귀한다.
-- OpenAI 원격 Store는 선택 경로이며 운영 승인·비용·품질 평가 전에는 필수가 아니다.
 
 ## 9. 데이터 수집과 RDB
 
@@ -356,11 +352,10 @@ Vector 대상은 공개 문서, 추출 완료 첨부, 게시된 FAQ뿐이다.
 
 ### 잘 구현된 부분
 
-- Gemini/OpenAI 키는 서버 환경변수만 사용하며 `VITE_*` 사용을 금지한다.
+- Gemini 키는 서버 환경변수만 사용하며 `VITE_*` 사용을 금지한다.
 - 일반 질문은 PII 패턴 마스킹 후 처리한다.
 - Prompt Injection과 단순 욕설·반복 입력은 모델 호출 전에 차단한다.
-- Gemini 안전 필터 또는 OpenAI 입·출력 moderation을 적용한다.
-- OpenAI provider는 `store=false`로 Responses API 저장을 비활성화한다.
+- Gemini 안전 필터를 적용한다.
 - 모델이 고른 ref를 서버가 다시 검증한다.
 - SCL 운영정보 citation은 `https://*.scllab.co.kr`, 선택적 일반 외부 검색은 서버 allowlist만 허용한다.
 - 상담 이름·전화·기관·내용은 Fernet으로 암호화한다.
@@ -505,7 +500,7 @@ Vector 대상은 공개 문서, 추출 완료 첨부, 게시된 FAQ뿐이다.
 
 | 장애 | 현재 동작 | 의도 |
 |---|---|---|
-| Gemini/OpenAI 키 없음·호출 실패 + `require_live=true` | HTTP 503 | 실시간 provider 성공 여부를 숨기지 않음 |
+| Gemini 키 없음·호출 실패 + `require_live=true` | HTTP 503 | 실시간 provider 성공 여부를 숨기지 않음 |
 | 공개 UI `require_live=false` | 검증된 lexical/RDB fallback, `mode=demo_fallback` | 제한·장애 중 공개 검색 가용성 유지 |
 | Vector 미설정/오류 | lexical 결과 유지 | 검색 가용성 유지 |
 | 모델이 존재하지 않는 ref 선택 | 답변 폐기, no-source 안내 | 환각 출처 차단 |
@@ -564,7 +559,7 @@ pytest warning은 FastAPI TestClient가 사용하는 Starlette/httpx 호환 경�
 ### P1 — 품질 게이트
 
 1. Ruff와 frontend lint를 GitLab CI에 추가
-2. 실제 Gemini/OpenAI 평가 결과를 모델·프롬프트 버전과 함께 artifact로 보존
+2. 실제 Gemini 평가 결과를 모델·프롬프트 버전과 함께 artifact로 보존
 3. 긴 검사명·다중 citation·선택지 UI 회귀 추가
 4. Docker build 이후 실제 8080→8000 채팅 smoke test 추가
 5. 대표 질문의 기대 `reply.kind`, domain, ref까지 검증
@@ -894,7 +889,7 @@ PII 시나리오는 현재 실제 동작대로 “마스킹 후 개인정보 안
 - 설정: `backend/app/config.py`
 - API 스키마: `backend/app/schemas.py`
 - 채팅 오케스트레이션: `backend/app/orchestrator.py`
-- Structured Output·Gemini/OpenAI: `backend/app/gemini_gateway.py`, `backend/app/openai_gateway.py`
+- 구조화 응답·Gemini: `backend/app/gemini_gateway.py`
 - 서버 정책: `backend/app/chat_policy.py`
 - 입력 방어: `backend/app/guardrails.py`
 - grounding: `backend/app/chat_grounding.py`

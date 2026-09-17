@@ -5,7 +5,7 @@ info:
   description: >-
     챗봇 백엔드와 기관 내부 검사결과 시스템 사이에 둘 Gateway 계약이다.
     공개 SCL 홈페이지의 공식 API라고 주장하지 않으며, 기관 승인 후 내부 시스템을
-    이 계약으로 어댑트한다. 사용자 인증정보와 결과 데이터는 OpenAI로 전달하지 않는다.
+    이 계약으로 어댑트한다. 사용자 인증정보와 결과 데이터는 Gemini로 전달하지 않는다.
 servers:
   - url: https://results-gateway.example.internal
 paths:

@@ -6,7 +6,6 @@
 - [데스크톱 Design QA](technical/design-qa.md)
 - [공개 데이터 RDB](technical/scl-public-data-rdb.md)
 - [검사 카탈로그 RDB](technical/test-catalog-rdb.md)
-- [Vector Store 운영 절차](technical/vector-store-runbook.md)
 - [개인 결과 Provider 설명](technical/personal-results-provider.md)
 - [개인 결과 Gateway OpenAPI](technical/result-provider-openapi.yaml)
 

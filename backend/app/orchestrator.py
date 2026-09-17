@@ -8,11 +8,9 @@ from .chat_grounding import GroundedReplyBuilder
 from .chat_policy import ChatPolicy
 from .chat_sessions import SessionState, SessionStore
 from .config import Settings
-from .external_search import OpenAIWebSearchProvider
 from .gemini_gateway import GeminiGateway
 from .guardrails import InputInspection, inspect_input
 from .offline_chat import OfflineChatResponder
-from .openai_gateway import OpenAIGateway
 from .public_search import PublicDataSearch, SearchHit, public_search
 from .schemas import ChatResponse, Reply, TestInfo
 
@@ -36,22 +34,12 @@ class ChatOrchestrator:
         self.sessions = session_store or SessionStore(
             settings.session_history_limit, settings.session_ttl_seconds, settings.session_max_entries
         )
-        if settings.llm_provider == "gemini":
-            self.gateway = (
-                GeminiGateway(settings, search, app_catalog=self.catalog) if settings.gemini_api_key else None
-            )
-        elif settings.llm_provider == "openai":
-            self.gateway = (
-                OpenAIGateway(settings, search, app_catalog=self.catalog) if settings.openai_api_key else None
-            )
-        else:
-            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.llm_provider}")
+        self.gateway = (
+            GeminiGateway(settings, search, app_catalog=self.catalog) if settings.gemini_api_key else None
+        )
         self.policy = ChatPolicy()
         self.reply_builder = GroundedReplyBuilder(self.catalog, search)
         self.offline_responder = OfflineChatResponder(self.catalog, search, self.reply_builder)
-        self.external_search = (
-            OpenAIWebSearchProvider(settings) if settings.external_web_search_configured else None
-        )
 
     def end_session(self, session_id: str) -> bool:
         return self.sessions.delete(session_id)
@@ -69,7 +57,6 @@ class ChatOrchestrator:
         dict[str, float],
     ]:
         assert self.gateway is not None
-        retrieve = getattr(self.gateway, "retrieve", None)
         timings: dict[str, float] = {}
 
         async def timed_call(name: str, function, *args, **kwargs):  # type: ignore[no-untyped-def]
@@ -78,60 +65,21 @@ class ChatOrchestrator:
             timings[name] = round((time.perf_counter() - started) * 1000, 1)
             return result
 
-        if isinstance(self.gateway, GeminiGateway):
-            retrieval = None
-            try:
-                interpreted = await timed_call(
-                    "interpretation", self.gateway.interpret, message, history, previous_tests or []
-                )
-                retrieval = await timed_call(
-                    "retrieval",
-                    self.gateway.retrieve_interpreted,
-                    message,
-                    interpreted,
-                    previous_tests or [],
-                )
-                plan, response_id = await timed_call("model", self.gateway.plan, message, history, retrieval)
-            except ModeratedContent:
-                return True, None, None, retrieval, timings
-            return False, plan, response_id, retrieval, timings
-
-        integrated_moderation = bool(
-            getattr(self.gateway, "uses_integrated_moderation", False)
-            and not self.public_search.settings.vector_search_configured
-        )
-        if integrated_moderation:
-            retrieval = await timed_call("retrieval", retrieve, message)
-            try:
-                plan, response_id = await timed_call("model", self.gateway.plan, message, history, retrieval)
-            except ModeratedContent:
-                return True, None, None, retrieval, timings
-            return False, plan, response_id, retrieval, timings
-        if retrieve is None:
-            flagged = await timed_call("moderation", self.gateway.moderate, message)
-            retrieval = None
-        elif self.public_search.settings.vector_search_configured:
-            # A vector search sends the query to an external service, so moderation
-            # must finish first when that optional path is enabled.
-            flagged = await timed_call("moderation", self.gateway.moderate, message)
-            retrieval = None if flagged else await timed_call("retrieval", retrieve, message)
-        else:
-            moderation_task = asyncio.create_task(timed_call("moderation", self.gateway.moderate, message))
-            retrieval_task = asyncio.create_task(timed_call("retrieval", retrieve, message))
-            flagged, retrieval = await asyncio.gather(moderation_task, retrieval_task)
-        if flagged:
-            return True, None, None, retrieval, timings
-        if retrieval is None:
-            plan, response_id = await timed_call("model", self.gateway.plan, message, history)
-        else:
-            plan, response_id = await timed_call(
-                "model",
-                self.gateway.plan,
-                message,
-                history,
-                retrieval,
-                integrated_moderation=False,
+        retrieval = None
+        try:
+            interpreted = await timed_call(
+                "interpretation", self.gateway.interpret, message, history, previous_tests or []
             )
+            retrieval = await timed_call(
+                "retrieval",
+                self.gateway.retrieve_interpreted,
+                message,
+                interpreted,
+                previous_tests or [],
+            )
+            plan, response_id = await timed_call("model", self.gateway.plan, message, history, retrieval)
+        except ModeratedContent:
+            return True, None, None, retrieval, timings
         return False, plan, response_id, retrieval, timings
 
     async def respond(
@@ -230,28 +178,6 @@ class ChatOrchestrator:
                 state.previous_tests = list(retrieval.test_candidates)
                 state.last_test_code = matched.code if matched else None
                 state.last_test_variant_key = matched.variant_key if matched else None
-            if (
-                self.external_search is not None
-                and reply.answerability == "none"
-                and reply.kind == "text"
-                and not flags.requires_authentication
-                and not flags.needs_handoff
-            ):
-                external_started = time.perf_counter()
-                try:
-                    external_reply = await asyncio.to_thread(
-                        self.external_search.search,
-                        inspection.model_input,
-                        plan.domain,
-                    )
-                except Exception:
-                    external_reply = None
-                timings["external_search"] = round(
-                    (time.perf_counter() - external_started) * 1000,
-                    1,
-                )
-                if external_reply is not None:
-                    reply = external_reply
             timings["grounding"] = round((time.perf_counter() - grounding_started) * 1000, 1)
             if matched:
                 state.last_test_code = matched.code

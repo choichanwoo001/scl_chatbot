@@ -13,7 +13,7 @@ def _client(pages: dict[str, str]) -> httpx.Client:
 
 def _sync() -> SCLPublicDataSync:
     return SCLPublicDataSync(
-        Settings(openai_api_key=None, scl_crawl_delay_seconds=0),
+        Settings(scl_crawl_delay_seconds=0),
     )
 
 

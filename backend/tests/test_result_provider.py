@@ -14,7 +14,7 @@ from app.schemas import ResultCredentials
 
 
 def test_unconfigured_provider_fails_without_retaining_credentials() -> None:
-    service = ResultService(Settings(openai_api_key=None, result_provider_mode="unconfigured"))
+    service = ResultService(Settings(result_provider_mode="unconfigured"))
     payload = ResultCredentials(
         session_id="result-session",
         user_id="private-id",
@@ -29,7 +29,7 @@ def test_unconfigured_provider_fails_without_retaining_credentials() -> None:
 
 
 def test_mock_provider_authenticates_lists_details_and_clears_session() -> None:
-    service = ResultService(Settings(openai_api_key=None), MockResultProvider())
+    service = ResultService(Settings(), MockResultProvider())
     service.authenticate(
         ResultCredentials(
             session_id="result-session",
@@ -49,7 +49,7 @@ def test_mock_provider_authenticates_lists_details_and_clears_session() -> None:
 
 
 def test_mock_provider_rejects_invalid_credentials() -> None:
-    service = ResultService(Settings(openai_api_key=None), MockResultProvider())
+    service = ResultService(Settings(), MockResultProvider())
     with pytest.raises(ResultAuthenticationFailed):
         service.authenticate(
             ResultCredentials(

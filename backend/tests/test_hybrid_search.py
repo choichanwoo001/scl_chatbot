@@ -61,8 +61,7 @@ def _vector_hit(document_id: int) -> VectorSearchHit:
 
 def _settings(**overrides: object) -> Settings:
     values: dict[str, object] = {
-        "openai_api_key": "test-key",
-        "openai_vector_store_id": "vs_test",
+        "gemini_api_key": "test-key",
         "vector_search_enabled": True,
     }
     values.update(overrides)

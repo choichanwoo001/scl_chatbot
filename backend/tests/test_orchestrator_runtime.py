@@ -1,10 +1,11 @@
 import asyncio
 
+from app.chat_contracts import ModelPlan, ModeratedContent
+from app.chat_retrieval import retrieve_context
 from app.config import Settings
 from app.database import SessionLocal
 from app.models import DataSource, PublicDocument
 from app.normalization import normalize_search_text
-from app.openai_gateway import ModelPlan
 from app.orchestrator import ChatOrchestrator, SessionStore
 
 
@@ -17,13 +18,18 @@ class FakeGateway:
         self.error = error
         self.plan_calls: list[tuple[str, list[dict[str, str]]]] = []
 
-    def moderate(self, text: str) -> bool:
-        return self.flagged
-
-    def plan(self, message: str, history: list[dict[str, str]]) -> tuple[ModelPlan, str]:
-        self.plan_calls.append((message, history.copy()))
+    def interpret(self, message, history, previous):
+        if self.flagged:
+            raise ModeratedContent("blocked")
         if self.error:
             raise self.error
+        return None
+
+    def retrieve_interpreted(self, message, interpreted, previous):
+        return retrieve_context(message, orchestrator_catalog, orchestrator_search)
+
+    def plan(self, message: str, history: list[dict[str, str]], retrieval) -> tuple[ModelPlan, str]:
+        self.plan_calls.append((message, history.copy()))
         assert self.result is not None
         return self.result, "resp_fake"
 
@@ -33,13 +39,17 @@ class SequenceGateway(FakeGateway):
         super().__init__()
         self.plans = plans
 
-    def plan(self, message: str, history: list[dict[str, str]]) -> tuple[ModelPlan, str]:
+    def plan(self, message: str, history: list[dict[str, str]], retrieval) -> tuple[ModelPlan, str]:
         self.plan_calls.append((message, history.copy()))
         return self.plans.pop(0), "resp_sequence"
 
 
 def _orchestrator() -> ChatOrchestrator:
-    return ChatOrchestrator(Settings(openai_api_key=None))
+    runtime = ChatOrchestrator(Settings())
+    global orchestrator_catalog, orchestrator_search
+    orchestrator_catalog = runtime.catalog
+    orchestrator_search = runtime.public_search
+    return runtime
 
 
 def test_moderation_block_prevents_model_planning() -> None:

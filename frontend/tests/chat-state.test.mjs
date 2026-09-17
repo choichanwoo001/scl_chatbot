@@ -25,11 +25,11 @@ test("keeps the user message when a live response succeeds", () => {
     type: "send_started", userMessage: { id: "user" },
   });
   const state = chatReducer(started, {
-    type: "send_succeeded", sessionId: "server-session", mode: "openai",
+    type: "send_succeeded", sessionId: "server-session", mode: "gemini",
     assistantMessage: { id: "assistant" },
   });
   assert.equal(state.sessionId, "server-session");
-  assert.equal(state.connectionMode, "openai");
+  assert.equal(state.connectionMode, "gemini");
   assert.equal(state.isSending, false);
   assert.deepEqual(state.messages.slice(-2).map((message) => message.id), ["user", "assistant"]);
 });

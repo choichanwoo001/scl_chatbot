@@ -12,7 +12,7 @@
 ## 결정
 
 서버가 provider별 Vector 검색을 직접 실행하고 키워드 결과와 결합한다. Gemini 경로는 공개
-문서의 로컬 임베딩 인덱스를 검색하고, OpenAI 경로는 Vector Store Search API를 사용한다.
+문서의 Gemini 로컬 임베딩 인덱스를 검색한다.
 어느 경로든 결과를 로컬 ref·공개 상태와 다시 대조하며 모델의 직접 `file_search`는 사용하지 않는다.
 
 ## 결과

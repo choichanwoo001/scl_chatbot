@@ -40,8 +40,6 @@ def main() -> None:
         DATABASE_URL="sqlite:///" + dest.as_posix(),
         SEED_DEMO_ON_EMPTY="false",
         VECTOR_SEARCH_ENABLED="false",
-        EXTERNAL_WEB_SEARCH_ENABLED="false",
-        OPENAI_API_KEY="",
         LLM_PROVIDER="gemini",
         GEMINI_API_KEY=local.get("GEMINI_API_KEY") or "",
         GEMINI_MODEL=local.get("GEMINI_MODEL") or "gemini-3.1-flash-lite",

@@ -1,14 +1,14 @@
+from app.chat_contracts import ModelCitation, ModelPlan
 from app.config import Settings
 from app.database import SessionLocal
 from app.models import DataSource, PublicDocument, ServiceLocation
 from app.normalization import normalize_search_text
-from app.openai_gateway import ModelCitation, ModelPlan
 from app.orchestrator import ChatOrchestrator
 from app.schemas import TestInfo as CatalogTestInfo
 
 
 def make_orchestrator() -> ChatOrchestrator:
-    return ChatOrchestrator(Settings(openai_api_key=None))
+    return ChatOrchestrator(Settings())
 
 
 def test_resolves_a_matched_test_code_to_catalog_data() -> None:

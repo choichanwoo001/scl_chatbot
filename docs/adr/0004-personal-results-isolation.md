@@ -11,7 +11,7 @@
 ## 결정
 
 개인 결과는 별도 Provider 인터페이스와 HTTPS/mTLS Gateway 계약으로 격리한다. 인증정보와 결과는
-OpenAI에 전달하거나 로컬 DB에 저장하지 않으며 Provider가 미설정이면 명시적으로 실패한다.
+Gemini에 전달하거나 로컬 DB에 저장하지 않으며 Provider가 미설정이면 명시적으로 실패한다.
 
 ## 결과
 

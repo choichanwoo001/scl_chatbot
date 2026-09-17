@@ -101,7 +101,7 @@ Gemini 시연에서는 `/health`의 `mode=gemini`, `live_chat_available=true`를
 | 채팅이 503 | 요청의 `require_live` → `/health` → Gemini 키·호출량·네트워크 |
 | 검색 결과 없음 | 카탈로그·공개 데이터 상태 → 동기화 스크립트 |
 | 첨부 본문 없음 | 추출 상태 → OCR·LibreOffice 가용성 |
-| Vector 결과 없음 | 활성화 플래그 → Gemini 인덱스·키 또는 OpenAI Store ID → 색인 커버리지 |
+| Vector 결과 없음 | 활성화 플래그 → Gemini 인덱스·키 → 색인 커버리지 |
 | 결과 인증 실패 | Provider mode → Gateway URL·인증서 |
 
 세부 운영 명령은 [운영·인수인계](operations-and-handoff.md)를 참고한다.

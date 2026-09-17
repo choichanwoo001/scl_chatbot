@@ -16,11 +16,11 @@
 | 분류 관계 | `GET /api/taxonomy/{term_id}/relations` 추가. 상·하위 양방향 관계, 이름, 관계 유형 제공 |
 | 변경 이력 | `RevisionRepository`와 `scripts/manage_revisions.py`로 조회·보관·보존 기간 정리 지원 |
 | 비어 있는 업무 테이블 | 접수·피드백·FAQ 기능이 사용하므로 유지 |
-| 비어 있는 벡터 테이블 | OpenAI 공급자 경로에서 사용하므로 유지. Gemini는 JSON 벡터 인덱스를 사용하는 기존 역할 유지 |
+| 벡터 인덱스 | Gemini JSON 벡터 인덱스 경로로 단일화 |
 | Python/Worker 중복 | `BACKEND_API_URL` 지정 시 Worker의 모든 API 요청은 Python에 전달. 백엔드 응답을 그대로 전달하고 연결 실패 시 503, 데모 답변으로 자동 전환하지 않음 |
 | Worker 스키마 중복 | 런타임 CREATE TABLE/INDEX 제거. 기존 Drizzle 마이그레이션이 유일한 스키마 변경 경로 |
 | 세션 무기한 보관 | API는 공유 DB 세션으로 저장, 만료 시간·보관 개수 제한·명시 삭제 지원. Worker D1도 TTL/개수 제한 적용 |
-| 공급자 결합 | 공통 계획 모델·프롬프트를 `chat_contracts.py`, 검색을 `chat_retrieval.py`로 이동. Gemini의 OpenAI 비공개 메서드 의존 제거 |
+| 공급자 결합 | 공통 계획 모델·프롬프트를 `chat_contracts.py`, 검색을 `chat_retrieval.py`로 이동 |
 | 거대 수집 모듈 | 공개 문서/카탈로그 수집, HTTP·파싱, DB 저장, 공통 자료형 모듈로 분리 |
 | 거대 검색 모듈 | 문서·첨부·FAQ, 검사·용기·보존제·분류, 지점·경로별 검색 메서드 분리. 랭킹·캐시·상세 조회도 분리 |
 | 비공개 캐시 접근 | `CatalogSearchRow`와 `search_rows()` 공개 읽기 계약 사용. 평가 스크립트·테스트도 변경 |

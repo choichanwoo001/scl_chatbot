@@ -4,8 +4,6 @@ import { parseStructuredText } from "./structuredText.js";
 
 const SOURCE_LABELS = {
   internal_scl: "SCL 공개 자료",
-  scl_live_web: "SCL 실시간 웹",
-  approved_external: "도메인 제한 외부 자료",
 };
 
 function sourceHostname(url) {
@@ -18,9 +16,6 @@ function sourceHostname(url) {
 
 function GroundingStatus({ message }) {
   if (message.error || message.role !== "assistant") return null;
-  if (message.grounding_status === "grounded_external") {
-    return <p className="grounding-note is-external">외부 공개 자료를 참고했습니다. 아래 근거자료 원문을 직접 확인해 판단해 주세요.</p>;
-  }
   if (message.grounding_status === "abstained" && message.answerability === "none") {
     return <p className="grounding-note is-abstained">확인 가능한 근거 없음 · 추측 답변 차단</p>;
   }
@@ -133,7 +128,6 @@ function TextReply({ message }) {
       <GroundingStatus message={message} />
       {message.citations?.length ? (
         <div className="citation-list">
-          {message.grounding_status === "grounded_external" ? <p className="citation-heading">근거자료 직접 확인</p> : null}
           {message.citations.map((citation) => citation.url ? (
             <a key={`${citation.title}-${citation.url}`} href={citation.url} target="_blank" rel="noreferrer">
               <span>{SOURCE_LABELS[citation.source_tier] || "출처"}</span>

@@ -18,7 +18,7 @@ class Citation(BaseModel):
     ref: str | None = None
     url: HttpUrl | None = None
     updated_at: str | None = None
-    source_tier: Literal["internal_scl", "scl_live_web", "approved_external"] = "internal_scl"
+    source_tier: Literal["internal_scl"] = "internal_scl"
     retrieved_at: str | None = None
     claim_ids: list[str] = Field(default_factory=list)
 
@@ -50,14 +50,11 @@ class Reply(BaseModel):
         "public_document",
         "public_database",
         "demo_data",
-        "scl_live_web",
-        "approved_external",
         "mixed",
         "no_source",
     ] = "no_source"
     grounding_status: Literal[
         "grounded_internal",
-        "grounded_external",
         "grounded_mixed",
         "abstained",
     ] = "abstained"
@@ -70,7 +67,7 @@ class ChatResponse(BaseModel):
     session_id: str
     displayed_input: str
     reply: Reply
-    mode: Literal["openai", "gemini", "demo_fallback"]
+    mode: Literal["gemini", "demo_fallback"]
     safety_action: Literal["allow", "warn", "redact", "block", "handoff"]
     domain: str = "unknown"
     sub_intent: str | None = None
@@ -84,7 +81,7 @@ class ChatResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
-    mode: Literal["openai", "gemini", "demo_fallback"]
+    mode: Literal["gemini", "demo_fallback"]
     model: str
     rag_enabled: bool
     live_chat_available: bool
@@ -96,8 +93,6 @@ class HealthResponse(BaseModel):
     vector_index_failed: int = 0
     vector_index_items_with_errors: int = 0
     vector_index_last_synced_at: str | None = None
-    external_web_search_enabled: bool = False
-    external_web_search_configured: bool = False
 
 
 class CatalogStatus(BaseModel):

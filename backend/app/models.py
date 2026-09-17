@@ -599,34 +599,6 @@ class AttachmentChunk(Base):
     normalized_text: Mapped[str] = mapped_column(Text, nullable=False)
 
 
-class VectorIndexItem(Base):
-    __tablename__ = "vector_index_items"
-    __table_args__ = (
-        UniqueConstraint("vector_store_id", "local_ref", name="uq_vector_index_store_ref"),
-        Index("ix_vector_index_file", "vector_store_id", "openai_file_id"),
-        Index("ix_vector_index_status", "vector_store_id", "index_status"),
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True)
-    local_ref: Mapped[str] = mapped_column(String(160), nullable=False)
-    entity_type: Mapped[str] = mapped_column(String(40), nullable=False)
-    entity_id: Mapped[str] = mapped_column(String(120), nullable=False)
-    vector_store_id: Mapped[str] = mapped_column(String(160), nullable=False)
-    openai_file_id: Mapped[str | None] = mapped_column(String(160))
-    file_name: Mapped[str] = mapped_column(String(500), nullable=False)
-    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    source_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    index_status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
-    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
-    usage_bytes: Mapped[int | None] = mapped_column(BigInteger)
-    indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    last_error: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False
-    )
-
-
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     __table_args__ = (

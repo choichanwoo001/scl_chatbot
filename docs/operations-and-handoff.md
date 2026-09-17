@@ -7,7 +7,7 @@
 | 프로필 | LLM | Vector | 저장소 | 결과 Provider | 목적 |
 |---|---|---|---|---|---|
 | 자동 테스트 | 없음 | 꺼짐 | 인메모리·임시 DB | mock·unconfigured | 비용 없는 결정적 검증 |
-| 로컬 데모 | Gemini 또는 OpenAI 선택 | 선택 | SQLite·메모리 세션 | unconfigured | UI·RDB 시연 |
+| 로컬 데모 | Gemini | 선택 | SQLite·메모리 세션 | unconfigured | UI·RDB 시연 |
 | 공개 Sites | Gemini 우선, 검색 fallback | Gemini 로컬 Index | D1 세션·상담·일일 호출량 | unconfigured | 제한된 공개 시연 |
 | 운영 후보 | 승인 provider | 품질 평가 후 활성 | PostgreSQL·공유 세션 | 승인된 HTTPS Gateway | 기관 승인 후 |
 
@@ -116,27 +116,6 @@ $env:PYTHONPATH="backend"
 생성된 `data/gemini_vector_index.json`의 모델·차원·건수와 공개 ref를 확인한 뒤 배포
 스냅샷을 갱신한다. 인덱스 또는 Gemini API가 실패하면 키워드 검색을 유지한다.
 
-### OpenAI Vector Store 선택 경로
-
-외부 저장소 생성과 업로드는 비용·외부 상태 변경이므로 승인된 운영자가 실행한다.
-
-```powershell
-$env:PYTHONPATH="backend"
-.venv\Scripts\python scripts\audit_vector_store.py
-.venv\Scripts\python scripts\ingest_openai_files.py --create-store --limit 20
-.venv\Scripts\python scripts\evaluate_vector_search.py
-.venv\Scripts\python scripts\ingest_openai_files.py --dry-run
-.venv\Scripts\python scripts\ingest_openai_files.py --batch-size 50
-.venv\Scripts\python scripts\audit_vector_store.py --strict
-```
-
-1. `VECTOR_SEARCH_ENABLED=true`, `VECTOR_SEARCH_SHADOW_MODE=true`로 배포한다.
-2. 호출 오류·지연과 기존 검색 순위를 비교한다.
-3. 의미 검색 평가 기준을 통과하면 shadow를 끈다.
-4. 이상 시 `VECTOR_SEARCH_ENABLED=false`로 롤백하고 재시작한다.
-
-상세 내용은 [Vector Store 기술 부록](appendices/technical/vector-store-runbook.md)을 따른다.
-
 ## 7. FAQ 운영
 
 ```powershell
@@ -145,7 +124,7 @@ $env:PYTHONPATH="backend"
 .venv\Scripts\python scripts\manage_faq.py publish <candidate_id>
 ```
 
-사용자 피드백은 바로 Vector Store나 공개 답변에 반영하지 않는다. 담당자 검토와 게시 후 다음
+사용자 피드백은 바로 벡터 인덱스나 공개 답변에 반영하지 않는다. 담당자 검토와 게시 후 다음
 Vector 증분 동기화에서 반영한다.
 
 ## 8. 백업과 복구
@@ -170,8 +149,8 @@ PostgreSQL 전환 시 기관 표준 백업·PITR 정책으로 대체한다.
 
 | 증상 | 즉시 조치 | 후속 확인 |
 |---|---|---|
-| Gemini/OpenAI 5xx·timeout | 공개 UI는 검색 fallback, `require_live=true`는 503 | 모델 상태·호출량·네트워크·키 |
-| Vector 오류 증가 | Vector 비활성화 | 로컬 Index 또는 Store 상태·매핑·커버리지 |
+| Gemini 5xx·timeout | 공개 UI는 검색 fallback, `require_live=true`는 503 | 모델 상태·호출량·네트워크·키 |
+| Vector 오류 증가 | Vector 비활성화 | 로컬 Index 상태·매핑·커버리지 |
 | 검색 품질 저하 | 직전 데이터 snapshot 사용 | 동기화 revision·평가셋 |
 | OCR 실패 증가 | 재시도 중단·원본 보존 | Tesseract 언어·용량·페이지 |
 | 결과 Gateway 오류 | 결과 기능만 중단 | HTTPS·mTLS·계약 응답 |

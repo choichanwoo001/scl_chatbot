@@ -35,8 +35,8 @@ SCL 홈페이지에 자연어 기반 검사 안내 챗봇을 적용했을 때의
 
 현재 호스팅 챗봇은 **React + Sites Worker + Gemini 3.1 Flash-Lite** 경로를 사용합니다. 검사·공개
 데이터는 로컬 RDB에서 내보낸 배포 스냅샷을 사용하고, 공개 문서·첨부는 Gemini 임베딩 로컬
-인덱스로 검색을 보강합니다. 로컬·Docker 실행은 동일한 응답 계약을 가진 FastAPI 백엔드를
-사용하며 Gemini와 OpenAI provider를 모두 지원합니다.
+인덱스로 검색을 보강합니다. 로컬·Docker 실행은 동일한 응답 계약을 가진 Gemini 전용
+FastAPI 백엔드를 사용합니다.
 
 ```mermaid
 flowchart LR
@@ -50,10 +50,7 @@ flowchart LR
     P --> T[RDB 참조 재검증]
     T --> E{내부 근거 충분?}
     E -->|예| O[text · test · choices<br/>result form · handoff form]
-    E -->|아니오| W[허용 도메인 Web Search]
-    W --> C[웹 URL·인용 검증]
-    C -->|검증 성공| O
-    C -->|근거 없음| N[추측 없이 답변 보류]
+    E -->|아니오| N[추측 없이 답변 보류]
     D[(D1 세션·상담·호출량)] -.-> A
     X[개인 결과 Provider] -. 현재 미연결 .-> O
     O --> F
@@ -64,7 +61,7 @@ flowchart LR
   `require_live=true`를 지정하면 Gemini 실패 시 HTTP 503을 반환합니다.
 - Vector Search 장애 시 RDB 키워드 검색으로 폴백하며, 배포본은 Gemini API 호출을 하루 20회로 제한합니다.
 - 모델이 작성한 사실 문장은 직접 노출하지 않고, 검증된 검사 카드·문서 레코드로 서버가 답변을 다시 조립합니다.
-- 내부 자료에 근거가 없을 때만 선택적으로 외부 검색을 실행합니다. SCL 운영정보는 `scllab.co.kr`, 일반 검사 배경은 운영 허용 목록의 공공·학술 도메인으로 제한하고 근거 링크를 함께 표시합니다.
+- 내부 자료에 근거가 없으면 외부 모델이나 웹검색으로 보완하지 않고 답변을 보류합니다.
 - 개인 결과는 인증 폼까지만 제공하며, 승인된 기관 Gateway 연결 전에는 실제 결과를 노출하지 않습니다.
 
 세부 요청 순서, 검색 구조와 신뢰 경계는 [시스템 아키텍처](docs/architecture.md), 실행 전 확인과
@@ -87,7 +84,7 @@ flowchart LR
 - 답변 피드백 저장, 중복 FAQ 후보 병합·게시 도구
 - PDF·Word·Excel·HWP·ZIP 첨부파일 다운로드, 한국어/영어 OCR, RDB 검색
 - 공개문서·첨부의 Gemini 임베딩 로컬 증분 색인과 하이브리드 검색
-- Vector Store 장애·미설정 시 기존 RDB 키워드 검색 자동 폴백
+- 벡터 인덱스 장애·미설정 시 기존 RDB 키워드 검색 자동 폴백
 - SCL 공개 검사항목 목록을 정규화해 저장한 RDB 검색
 - 검사코드·검사명·검체·방법·소요일 검색과 원문 상세 링크
 - 증분 재수집, 원본 스냅샷, 변경 revision, 실패 안전성
@@ -111,7 +108,7 @@ $env:PYTHONPATH="backend"
 로컬 FastAPI의 기본 provider는 Gemini입니다. 루트의 `.env.example`을 `.env`로 복사한 뒤
 `GEMINI_API_KEY`를 설정하세요. 백엔드, Vite와 Docker Compose가 모두 이 파일 하나를 사용합니다.
 기본 모델은 `gemini-3.1-flash-lite`이고 `.env` 변경 후 백엔드와 Vite를 재시작해야 합니다.
-Gemini 키가 없거나 호출에 실패해도 OpenAI로 자동 전환하지 않습니다.
+Gemini 키가 없거나 호출에 실패하면 검증된 로컬 검색으로만 복귀합니다.
 `/health`의 `live_chat_available`은 키 설정 여부이며 실제 연결 성공은
 `/api/chat`에 `require_live=true`로 요청해 확인합니다. Docker도 루트 `.env`를 사용합니다.
 공통 요청 타임아웃은 `LLM_TIMEOUT_SECONDS`로 설정합니다. `python scripts/build_gemini_vector_index.py`로 공개 문서·첨부 벡터 인덱스를
@@ -119,47 +116,6 @@ Gemini 키가 없거나 호출에 실패해도 OpenAI로 자동 전환하지 않
 로컬 검색으로 복귀합니다. 실시간 호출 성공을 필수로 검증할 때만 API에 `require_live=true`를
 보냅니다. `SEED_DEMO_ON_EMPTY=true`는 개발·단위 테스트에서만 사용하며, 키를 `VITE_`
 환경변수에 넣으면 브라우저에 노출되므로 금지합니다.
-
-OpenAI 기반 외부 공개자료 검색은 Gemini 모드에서는 호출하지 않으며 기본적으로 꺼져 있습니다. `EXTERNAL_WEB_SEARCH_ENABLED=true`와 서버 전용 `OPENAI_API_KEY`를 설정해야 하며, `EXTERNAL_WEB_SEARCH_ALLOWED_DOMAINS`에 운영 허용 도메인만 등록합니다. 이는 기관의 공식 승인을 의미하지 않습니다. 검색 결과의 사실 문장에 유효한 웹 인용이 빠져 있거나 인용 URL이 허용 도메인을 벗어나면 답변 전체를 폐기하고, 채택한 경우에는 사용자가 판단할 수 있도록 원문 링크를 표시합니다.
-
-### 선택 사항: OpenAI 요청 로그 확인(request-logger)
-
-[AI Hero request-logger](https://github.com/ai-hero-dev/ai-coding-crash-course/tree/main/request-logger)는 OpenAI provider로 전환했을 때 사용하는
-OpenAI 요청과 응답을 로컬 Markdown으로 기록하는 개발용 프록시입니다. 원본 소스는 저장소에
-복사하지 않으며 첫 실행 때 `.tools/request-logger-source`에 내려받습니다. 로그에는 시스템 지침,
-사용자 메시지와 모델 응답이 포함될 수 있으므로 `.tools/` 전체를 Git에서 제외합니다.
-
-먼저 프로젝트 루트에서 도구 의존성을 설치합니다.
-
-```powershell
-npm install
-```
-
-SCL 백엔드의 OpenAI 요청을 확인할 때는 터미널 두 개를 사용합니다.
-
-```powershell
-# 터미널 1: 로컬 프록시(기본 8787 포트)
-npm run request-logger:app
-
-# 터미널 2: OPENAI_BASE_URL을 프록시로 지정해 백엔드 실행
-npm run backend:logged
-```
-
-요청 후 생성된 파일은
-`.tools/request-logger-source/request-logger/logs/`에서 확인합니다. 평소처럼 백엔드를 실행하면
-프록시를 사용하지 않습니다. 앱 모드는 원본의 Codex/OpenAI API 라우팅 프로필을 재사용하므로
-캡처의 `agent` 메타데이터는 `Codex`로 표시됩니다. 포트를 바꾸려면 스크립트를 직접 실행해
-양쪽 값을 맞춥니다.
-
-```powershell
-.\scripts\start_request_logger.ps1 -App -Port 9000
-.\scripts\start_backend_logged.ps1 -LoggerPort 9000
-```
-
-Codex 같은 코딩 에이전트 자체의 요청을 관찰하려면 `npm run request-logger`를 실행하고 원본
-마법사의 안내를 따릅니다. 선택을 다시 묻도록 하려면
-`.\scripts\start_request_logger.ps1 -Force`를 사용하고, 원본 도구를 갱신하려면 `-Update`를
-추가합니다.
 
 기본 개발 RDB는 `data/scl_catalog.db` SQLite 파일입니다. Supabase/PostgreSQL은 Alembic으로
 스키마를 먼저 준비하고, 데이터 적재·검증 후 실행 계정의 `DATABASE_URL=postgresql+psycopg://...`로
@@ -195,9 +151,8 @@ $env:PYTHONPATH="backend"
 ```
 
 `.env.example`은 Gemini 로컬 Vector Index를 활성화하며, 코드 자체의 환경변수 미설정 기본값은
-비활성입니다. Gemini 인덱스는 `scripts/build_gemini_vector_index.py`, OpenAI Vector Store를 선택한
-경우의 점검·shadow·롤백은 [Vector Store 운영 절차](docs/appendices/technical/vector-store-runbook.md)를
-따릅니다. 어느 provider든 실패하면 RDB 키워드 검색 결과를 유지합니다.
+비활성입니다. Gemini 인덱스는 `scripts/build_gemini_vector_index.py`로 생성하고
+`scripts/audit_vector_store.py`로 커버리지를 점검합니다. 의미 검색이 실패하면 RDB 키워드 검색 결과를 유지합니다.
 
 추출 결과는 `extracted`, `ocr_required`, `ocr_no_text`, `unsupported`, `source_unavailable`,
 `too_large`로 구분해 저장합니다. 스캔 PDF와 이미지는 로컬 Tesseract `kor+eng` 모델로 처리하며

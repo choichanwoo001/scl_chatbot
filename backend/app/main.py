@@ -55,7 +55,7 @@ def create_app(app_services: AppServices | None = None) -> FastAPI:
     application = FastAPI(
         title="SCL AI 검사안내 API",
         version="0.1.0",
-        description="SCL 공개 검사·문서 RDB와 OpenAI Structured Output을 사용하는 챗봇 API.",
+        description="SCL 공개 검사·문서 RDB와 Gemini 구조화 응답을 사용하는 챗봇 API.",
     )
     application.state.services = configured
     application.add_middleware(

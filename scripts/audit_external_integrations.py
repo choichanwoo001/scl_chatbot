@@ -73,9 +73,9 @@ def main() -> None:
 
     report = {
         "ok": not actionable,
-        "openai": {
-            "configured": bool(settings.openai_api_key),
-            "model": settings.openai_chat_model,
+        "gemini": {
+            "configured": bool(settings.gemini_api_key),
+            "model": settings.gemini_model,
             "vector_search_enabled": settings.vector_search_enabled,
             "vector_search_configured": settings.vector_search_configured,
             "vector_search_shadow_mode": settings.vector_search_shadow_mode,

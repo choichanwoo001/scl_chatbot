@@ -19,7 +19,7 @@
 | FR-03 | 같은 세션의 후속 질문 | Sites D1·FastAPI 메모리 세션·변형 키 | 2턴 회귀 테스트 | 완료 |
 | FR-04 | 공개 공지·콘텐츠 검색 | PublicDataSearch | 공개 검색 평가 | 16/17, 랭킹 보완 필요 |
 | FR-05 | PDF·Office·HWP·ZIP 본문 검색 | 추출·OCR 파이프라인 | 첨부 추출 테스트 | 완료 |
-| FR-06 | 의미가 유사한 문서 검색 | Gemini 로컬 Index·OpenAI Vector Provider·하이브리드 검색 | provider·Sites worker 테스트 | 구현·로컬 색인 완료 |
+| FR-06 | 의미가 유사한 문서 검색 | Gemini 로컬 Index·하이브리드 검색 | provider·Sites worker 테스트 | 구현·로컬 색인 완료 |
 | FR-07 | 답변 출처와 기준일 표시 | Grounded Reply Builder | 참조 위조 방지 테스트 | 완료 |
 | FR-08 | 개인정보·공격 입력 처리 | Guardrails·Moderation | 안전 테스트 | 완료 |
 | FR-09 | 채팅 안에서 상담 접수 | Workflow API·암호화 저장 | API·암호화 테스트 | 완료 |
@@ -53,7 +53,7 @@
 - 사용자 ID·비밀번호·본인확인 값
 - 기관 내부 검사 DB와 계약 정보
 - 채팅 원문 영구 기록
-- 검토되지 않은 FAQ 초안의 Vector Store 업로드
+- 검토되지 않은 FAQ 초안의 벡터 인덱스 반영
 
 ## 5. 명시적 제외 범위
 

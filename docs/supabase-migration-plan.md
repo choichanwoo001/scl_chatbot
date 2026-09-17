@@ -78,7 +78,7 @@ React 화면 → 동일 출처 API 프록시 또는 HTTPS FastAPI
 - Supabase에는 기존 32개 테이블과 세션·일일 사용량 테이블을 둔다. 초기 목표는 애플리케이션 테이블 34개이며, migration 관리 테이블은 별도다.
 - React의 기존 API 요청·응답 계약을 유지한다. 브라우저는 항상 같은 origin의 `/api`를 호출하고, 로컬 Vite와 Docker Nginx는 FastAPI로 프록시하며 Sites는 Worker가 처리한다.
 - FastAPI의 별도 실행 환경이 필요하다. Supabase DB를 생성하는 것만으로 Python API가 배포되지는 않는다.
-- 기존 Gemini 로컬 인덱스·OpenAI Vector Store와 ID 매핑을 유지한다. 첨부 원본과 인덱스 파일은 FastAPI 실행 환경에 제공하고, 모든 인스턴스에 같은 버전을 배포한다.
+- 기존 Gemini 로컬 인덱스의 공개 ref 매핑을 유지한다. 첨부 원본과 인덱스 파일은 FastAPI 실행 환경에 제공하고, 모든 인스턴스에 같은 버전을 배포한다.
 - Auth·Storage·pgvector 전환과 검색 알고리즘 개선은 별도 범위다. 공개 스냅샷은 개발·테스트용으로 유지할 수 있지만 운영의 원본은 PostgreSQL로 명시한다.
 
 ## 4. 단계별 실행 계획

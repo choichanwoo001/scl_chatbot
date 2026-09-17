@@ -140,9 +140,7 @@ class PublicDataSearch(SearchRanking, SearchRows, LexicalSearch, SearchDetails):
     def status(self) -> dict[str, Any]:
         from .vector_index import vector_index_status
 
-        index_status = vector_index_status(
-            self.settings.openai_vector_store_id, self.settings, session_factory=self.session_factory
-        )
+        index_status = vector_index_status(self.settings)
         with self.session_factory() as session:
             return {
                 "documents": session.scalar(select(func.count()).select_from(PublicDocument)) or 0,

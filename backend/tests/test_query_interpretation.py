@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from app.chat_contracts import ModelPlan, RetrievalContext
 from app.config import Settings
 from app.normalization import normalize_search_text
-from app.openai_gateway import ModelPlan, RetrievalContext
 from app.orchestrator import ChatOrchestrator
 from app.query_interpretation import (
     Identifier,

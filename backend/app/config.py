@@ -29,11 +29,6 @@ class Settings:
     gemini_vector_index_path: str = os.getenv(
         "GEMINI_VECTOR_INDEX_PATH", str(ROOT / "data" / "gemini_vector_index.json")
     )
-    openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
-    openai_base_url: str | None = os.getenv("OPENAI_BASE_URL") or None
-    openai_chat_model: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-5.6-luna")
-    openai_reasoning_effort: str = os.getenv("OPENAI_REASONING_EFFORT", "low")
-    openai_vector_store_id: str | None = os.getenv("OPENAI_VECTOR_STORE_ID")
     vector_search_enabled: bool = os.getenv("VECTOR_SEARCH_ENABLED", "false").lower() in {
         "1",
         "true",
@@ -88,28 +83,7 @@ class Settings:
     ocr_page_segmentation_mode: int = int(os.getenv("OCR_PSM", "3"))
     office_converter_cmd: str | None = os.getenv("OFFICE_CONVERTER_CMD") or None
     office_converter_timeout_seconds: int = int(os.getenv("OFFICE_CONVERTER_TIMEOUT_SECONDS", "120"))
-    request_timeout_seconds: float = float(
-        os.getenv("LLM_TIMEOUT_SECONDS", os.getenv("OPENAI_TIMEOUT_SECONDS", "30"))
-    )
-    openai_max_retries: int = int(os.getenv("OPENAI_MAX_RETRIES", "0"))
-    external_web_search_enabled: bool = os.getenv("EXTERNAL_WEB_SEARCH_ENABLED", "false").lower() in {
-        "1",
-        "true",
-        "yes",
-    }
-    external_web_search_model: str = os.getenv(
-        "EXTERNAL_WEB_SEARCH_MODEL", os.getenv("OPENAI_CHAT_MODEL", "gpt-5.6-luna")
-    )
-    external_web_search_allowed_domains: tuple[str, ...] = _csv(
-        os.getenv(
-            "EXTERNAL_WEB_SEARCH_ALLOWED_DOMAINS",
-            (
-                "scllab.co.kr,kdca.go.kr,mfds.go.kr,hira.or.kr,"
-                "pubmed.ncbi.nlm.nih.gov,clinicaltrials.gov,who.int,cdc.gov,fda.gov"
-            ),
-        )
-    )
-    external_web_search_timeout_seconds: float = float(os.getenv("EXTERNAL_WEB_SEARCH_TIMEOUT_SECONDS", "15"))
+    request_timeout_seconds: float = float(os.getenv("LLM_TIMEOUT_SECONDS", "30"))
     app_environment: str = os.getenv("APP_ENV", "development")
     database_url: str = os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL
     migration_database_url: str | None = os.getenv("MIGRATION_DATABASE_URL") or None
@@ -130,6 +104,8 @@ class Settings:
     scl_inactive_after_misses: int = int(os.getenv("SCL_INACTIVE_AFTER_MISSES", "3"))
 
     def __post_init__(self) -> None:
+        if self.llm_provider != "gemini":
+            raise ValueError("LLM_PROVIDER must be gemini")
         if min(self.session_history_limit, self.session_ttl_seconds, self.session_max_entries) < 1:
             raise ValueError("Session history, TTL and capacity must be positive")
         if self.app_environment not in {"development", "test", "production"}:
@@ -164,42 +140,22 @@ class Settings:
 
     @property
     def mode(self) -> str:
-        if self.llm_provider == "gemini":
-            return "gemini" if self.gemini_api_key else "demo_fallback"
-        if self.llm_provider == "openai" and self.openai_api_key:
-            return "openai"
-        return "demo_fallback"
+        return "gemini" if self.gemini_api_key else "demo_fallback"
 
     @property
     def chat_model(self) -> str:
-        return self.gemini_model if self.llm_provider == "gemini" else self.openai_chat_model
+        return self.gemini_model
 
     @property
     def live_chat_available(self) -> bool:
-        return self.mode in {"gemini", "openai"}
+        return self.mode == "gemini"
 
     @property
     def vector_search_configured(self) -> bool:
-        if self.llm_provider == "gemini":
-            return bool(
-                self.vector_search_enabled
-                and self.gemini_api_key
-                and Path(self.gemini_vector_index_path).is_file()
-            )
-        return bool(self.vector_search_enabled and self.openai_api_key and self.openai_vector_store_id)
-
-    @property
-    def validated_reasoning_effort(self) -> str:
-        allowed = {"none", "low", "medium", "high", "xhigh", "max"}
-        return self.openai_reasoning_effort if self.openai_reasoning_effort in allowed else "low"
-
-    @property
-    def external_web_search_configured(self) -> bool:
         return bool(
-            self.llm_provider == "openai"
-            and self.external_web_search_enabled
-            and self.openai_api_key
-            and self.external_web_search_allowed_domains
+            self.vector_search_enabled
+            and self.gemini_api_key
+            and Path(self.gemini_vector_index_path).is_file()
         )
 
 

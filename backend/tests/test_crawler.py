@@ -44,7 +44,6 @@ def isolated_crawler(monkeypatch) -> tuple[SCLTestCrawler, sessionmaker]:  # typ
     monkeypatch.setattr("app.scl_crawler.SessionLocal", factory)
     crawler = SCLTestCrawler(
         Settings(
-            openai_api_key=None,
             database_url="sqlite:///:memory:",
             seed_demo_on_empty=False,
             scl_inactive_after_misses=2,

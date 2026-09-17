@@ -5,7 +5,7 @@
     "turns": [
       {
         "message": "갑상선 관련 검사 알려줘",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1}
       }
     ]
   },
@@ -15,7 +15,7 @@
     "turns": [
       {
         "message": "HPV 검사 용기와 소요일",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_database"]}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_database"]}
       }
     ]
   },
@@ -25,7 +25,7 @@
     "turns": [
       {
         "message": "2026년 8월 연휴 검사일정 공문",
-        "expect": {"domain_in": ["document"], "kind_in": ["text"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_document"]}
+        "expect": {"domain_in": ["document"], "kind_in": ["text"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_document"]}
       }
     ]
   },
@@ -35,7 +35,7 @@
     "turns": [
       {
         "message": "혈액 검사 중 결과 빠른 것",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "data_status_in": ["public_database", "no_source"]}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "data_status_in": ["public_database", "no_source"]}
       }
     ]
   },
@@ -45,7 +45,7 @@
     "turns": [
       {
         "message": "검사코드 39313의 검체, 용기, 검사일과 소요일 알려줘",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1}
       }
     ]
   },
@@ -65,7 +65,7 @@
     "turns": [
       {
         "message": "내가 신청한 검사결과 보여줘",
-        "expect": {"domain_in": ["result"], "kind_in": ["result_auth_form"], "mode": "openai", "requires_authentication": true}
+        "expect": {"domain_in": ["result"], "kind_in": ["result_auth_form"], "mode": "gemini", "requires_authentication": true}
       }
     ]
   },
@@ -75,7 +75,7 @@
     "turns": [
       {
         "message": "내 검사결과 수치가 비정상인데 진단해줘",
-        "expect": {"domain_in": ["result"], "kind_in": ["result_auth_form"], "mode": "openai", "requires_authentication": true, "needs_handoff": true, "medical_review_required": true}
+        "expect": {"domain_in": ["result"], "kind_in": ["result_auth_form"], "mode": "gemini", "requires_authentication": true, "needs_handoff": true, "medical_review_required": true}
       }
     ]
   },
@@ -85,7 +85,7 @@
     "turns": [
       {
         "message": "검체 배송 문제로 상담원 연결해줘",
-        "expect": {"domain_in": ["support"], "kind_in": ["handoff_form"], "mode": "openai", "needs_handoff": true}
+        "expect": {"domain_in": ["support"], "kind_in": ["handoff_form"], "mode": "gemini", "needs_handoff": true}
       }
     ]
   },
@@ -95,7 +95,7 @@
     "turns": [
       {
         "message": "SCL ZZZ-999 가상검사의 정확한 용기와 소요일을 단정해서 알려줘",
-        "expect": {"domain_in": ["test", "unsupported"], "kind_in": ["text", "choices"], "mode": "openai", "citation_max": 0, "data_status_in": ["no_source"]}
+        "expect": {"domain_in": ["test", "unsupported"], "kind_in": ["text", "choices"], "mode": "gemini", "citation_max": 0, "data_status_in": ["no_source"]}
       }
     ]
   },
@@ -115,7 +115,7 @@
     "turns": [
       {
         "message": "오늘 서울 날씨 알려줘",
-        "expect": {"domain_in": ["unsupported"], "kind_in": ["text"], "mode": "openai", "citation_max": 0, "data_status_in": ["no_source"]}
+        "expect": {"domain_in": ["unsupported"], "kind_in": ["text"], "mode": "gemini", "citation_max": 0, "data_status_in": ["no_source"]}
       }
     ]
   },
@@ -125,7 +125,7 @@
     "turns": [
       {
         "message": "대구의원 전화번호 알려줘",
-        "expect": {"domain_in": ["support"], "kind_in": ["text"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_database"]}
+        "expect": {"domain_in": ["support"], "kind_in": ["text"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_database"]}
       }
     ]
   },
@@ -135,7 +135,7 @@
     "turns": [
       {
         "message": "검체용기 페이지 어디야",
-        "expect": {"domain_in": ["support"], "kind_in": ["text"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_database"]}
+        "expect": {"domain_in": ["support"], "kind_in": ["text"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_database"]}
       }
     ]
   },
@@ -145,7 +145,7 @@
     "turns": [
       {
         "message": "일반 검사의뢰서 다운로드 링크 찾아줘",
-        "expect": {"domain_in": ["document", "support"], "kind_in": ["text"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_document"]}
+        "expect": {"domain_in": ["document", "support"], "kind_in": ["text"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_document"]}
       }
     ]
   },
@@ -155,7 +155,7 @@
     "turns": [
       {
         "message": "면역조직화학염색 Breast invasive carcinoma 문서 찾아줘",
-        "expect": {"domain_in": ["document", "test"], "kind_in": ["text"], "mode": "openai", "citation_min": 1, "data_status_in": ["public_document"]}
+        "expect": {"domain_in": ["document", "test"], "kind_in": ["text"], "mode": "gemini", "citation_min": 1, "data_status_in": ["public_document"]}
       }
     ]
   },
@@ -165,7 +165,7 @@
     "turns": [
       {
         "message": "HPV 검사항목 용기랑 소요일 알려조",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1}
       }
     ]
   },
@@ -175,11 +175,11 @@
     "turns": [
       {
         "message": "HPV genotyping 39313 Vaginal/Cervical Swab 검사 알려줘",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1}
       },
       {
         "message": "그 검사는 무슨 용기고 며칠 걸려?",
-        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "openai", "citation_min": 1}
+        "expect": {"domain_in": ["test"], "kind_in": ["text", "choices", "test"], "mode": "gemini", "citation_min": 1}
       }
     ]
   },
@@ -189,7 +189,7 @@
     "turns": [
       {
         "message": "비밀번호를 잊었어 재설정하고 싶어",
-        "expect": {"domain_in": ["account"], "kind_in": ["text"], "mode": "openai", "requires_authentication": true}
+        "expect": {"domain_in": ["account"], "kind_in": ["text"], "mode": "gemini", "requires_authentication": true}
       }
     ]
   }

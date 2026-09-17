@@ -10,7 +10,6 @@ os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 os.environ.setdefault("SEED_DEMO_ON_EMPTY", "false")
 os.environ["GEMINI_API_KEY"] = ""
-os.environ["OPENAI_API_KEY"] = ""
 
 from alembic import command
 from app.config import Settings
