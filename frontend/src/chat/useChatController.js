@@ -7,6 +7,7 @@ import {
   listResults,
   logoutResults,
   sendChatMessage,
+  submitFeedback,
   submitHandoff,
 } from "../lib/chatApi.js";
 import {
@@ -20,10 +21,17 @@ function messageId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function assistantMessage(result) {
+function assistantMessage(result, question) {
   return {
     id: messageId("assistant"), role: "assistant", ...result.reply,
     liveGenerated: result.mode === "gemini",
+    feedbackContext: {
+      responseId: result.response_id || null,
+      question: result.displayed_input || question,
+      domain: result.domain || null,
+      subIntent: result.sub_intent || null,
+      sourceRefs: (result.reply.citations || []).map((citation) => citation.ref).filter(Boolean),
+    },
   };
 }
 
@@ -66,7 +74,7 @@ export function useChatController() {
         type: "send_succeeded",
         sessionId: result.session_id,
         mode: result.mode,
-        assistantMessage: assistantMessage(result),
+        assistantMessage: assistantMessage(result, trimmed),
       });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "실시간 응답을 생성하지 못했습니다.";
@@ -94,13 +102,28 @@ export function useChatController() {
     } });
   };
 
-  const handoff = async (values) => {
+  const handoff = async (values, sourceMessage) => {
     if (!state.sessionId) throw new Error("채팅 세션을 먼저 시작해 주세요.");
-    const receipt = await submitHandoff({ session_id: state.sessionId, related_refs: [], ...values });
+    const relatedRefs = sourceMessage?.feedbackContext?.sourceRefs || [];
+    const receipt = await submitHandoff({ session_id: state.sessionId, related_refs: relatedRefs, ...values });
     dispatch({ type: "message_appended", message: {
       id: messageId("handoff"), role: "assistant", kind: "text",
       text: `상담 문의가 접수되었습니다. 접수번호는 ${receipt.public_id}입니다.`,
     } });
+  };
+
+  const feedback = async (message, values) => {
+    if (!state.sessionId || !message.feedbackContext) throw new Error("평가할 답변 정보가 없습니다.");
+    return submitFeedback({
+      session_id: state.sessionId,
+      response_id: message.feedbackContext.responseId,
+      question: message.feedbackContext.question,
+      answer: message.text,
+      domain: message.feedbackContext.domain,
+      sub_intent: message.feedbackContext.subIntent,
+      source_refs: message.feedbackContext.sourceRefs,
+      ...values,
+    });
   };
 
   const closeSession = () => {
@@ -124,6 +147,7 @@ export function useChatController() {
       authenticate,
       selectResult,
       handoff,
+      feedback,
       closeSession,
       reopen,
     },

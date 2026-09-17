@@ -353,6 +353,48 @@ function testReply(item, text = "확인된 SCL 공개 검사 항목입니다. �
   };
 }
 
+function requestedFieldSlots(query) {
+  const text = String(query || "");
+  return [
+    ["billing", "급여코드", /(?:급여|보험)\s*코드/i],
+    ["specimen", "검체", /검체/i],
+    ["container", "용기", /용기|튜브/i],
+    ["method", "검사방법", /검사\s*방법|방법/i],
+    ["schedule", "검사요일", /검사\s*(?:요일|일정)|(?<!소)요일/i],
+    ["tat", "소요일", /소요\s*일|며칠|얼마나\s*걸/i],
+  ].filter(([, , pattern]) => pattern.test(text));
+}
+
+function applyAnswerCoverage(reply, query) {
+  const slots = requestedFieldSlots(query);
+  if (!slots.length || reply.kind !== "test" || !reply.test) return reply;
+  const item = reply.test;
+  const values = {
+    billing: item.public_details?.["급여코드"] || item.billing_codes?.join(", "),
+    specimen: item.specimen,
+    container: item.container,
+    method: item.method,
+    schedule: item.schedule,
+    tat: item.tat,
+  };
+  const facts = [];
+  const missing = [];
+  for (const [field, label] of slots) {
+    const value = values[field];
+    if (value && String(value).trim() !== "-") facts.push(`- ${label}: ${String(value).trim()}`);
+    else missing.push(`${item.name}: ${label}`);
+  }
+  let prefix = `요청하신 정보\n${facts.join("\n")}`;
+  if (missing.length) prefix += `\n\n확인하지 못한 항목\n- ${missing.join("\n- ")}`;
+  return {
+    ...reply,
+    text: `${prefix}\n\n${reply.text}`,
+    answerability: missing.length ? (facts.length ? "partial" : "none") : "full",
+    claim_coverage: facts.length / slots.length,
+    missing_information: missing,
+  };
+}
+
 function publicReply(item) {
   return {
     kind: "text",
@@ -565,7 +607,8 @@ async function handleChat(request, env) {
     ? contextualCandidateReply(inspection.modelInput, previousTests, sessionState?.last_filter)
     : null;
   if (contextual) {
-    const { reply, filter } = contextual;
+    const { filter } = contextual;
+    const reply = applyAnswerCoverage(contextual.reply, inspection.modelInput);
     const selectedTest = reply.kind === "test" ? reply.test : lastTest;
     try {
       await saveSession(env, sessionId, {
@@ -643,6 +686,7 @@ async function handleChat(request, env) {
     reply = fallback.reply;
     domain = fallback.domain;
   }
+  reply = applyAnswerCoverage(reply, inspection.modelInput);
 
   const selectedTest = reply.kind === "test" ? reply.test : lastTest;
   const rememberedTests = requestedCodes.length || tests.length
@@ -728,6 +772,79 @@ async function handleHandoff(request, env) {
   return json({ public_id: publicId, status: "submitted", created_at: now.toISOString() }, 201);
 }
 
+function redactFeedbackText(value, limit) {
+  return String(value || "").slice(0, limit)
+    .replace(RESIDENT_ID, "[주민등록번호 가림]")
+    .replace(PHONE_IN_TEXT, "[전화번호 가림]")
+    .replace(EMAIL, "[이메일 가림]")
+    .trim();
+}
+
+async function handleFeedback(request, env) {
+  let body;
+  try { body = await request.json(); } catch { return detail("JSON 요청 형식을 확인해 주세요.", 400); }
+  if (typeof body.session_id !== "string" || !body.session_id || body.session_id.length > 80) return detail("채팅 세션을 먼저 시작해 주세요.", 422);
+  if (!new Set(["helpful", "not_helpful"]).has(body.rating)) return detail("답변 평가 값을 확인해 주세요.", 422);
+  if (body.response_id != null && (typeof body.response_id !== "string" || body.response_id.length > 120)) return detail("응답 식별자를 확인해 주세요.", 422);
+  if (body.reason != null && (typeof body.reason !== "string" || body.reason.length > 80)) return detail("평가 사유를 확인해 주세요.", 422);
+  if (typeof body.question !== "string" || !body.question.trim() || body.question.length > 500) return detail("평가할 질문을 확인해 주세요.", 422);
+  if (typeof body.answer !== "string" || !body.answer.trim() || body.answer.length > 3000) return detail("평가할 답변을 확인해 주세요.", 422);
+  if (body.comment != null && (typeof body.comment !== "string" || body.comment.length > 500)) return detail("추가 의견을 확인해 주세요.", 422);
+
+  await ensureDatabase(env);
+  const question = redactFeedbackText(body.question, 500);
+  const answer = redactFeedbackText(body.answer, 3000);
+  const comment = redactFeedbackText(body.comment, 500) || null;
+  const normalizedQuestion = normalize(question);
+  if (!normalizedQuestion) return detail("FAQ 후보로 저장할 질문이 없습니다.", 422);
+  const refs = Array.isArray(body.source_refs)
+    ? [...new Set(body.source_refs.filter((value) => typeof value === "string" && SAFE_REF.test(value)))].slice(0, 10)
+    : [];
+  const domain = typeof body.domain === "string" ? body.domain.slice(0, 50) : null;
+  const subIntent = typeof body.sub_intent === "string" ? body.sub_intent.slice(0, 80) : null;
+  const fingerprint = await sha256([domain || "", subIntent || "", normalizedQuestion, ...refs.sort()].join("|"));
+  const now = new Date().toISOString();
+  const positive = body.rating === "helpful" ? 1 : 0;
+  const negative = body.rating === "not_helpful" ? 1 : 0;
+
+  await env.DB.prepare(`INSERT INTO faq_candidates (
+    fingerprint, canonical_question, normalized_question, canonical_answer, domain, sub_intent,
+    source_refs_json, occurrence_count, positive_count, negative_count, status, created_at, updated_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, 'draft', ?, ?)
+  ON CONFLICT(fingerprint) DO UPDATE SET
+    occurrence_count = occurrence_count + 1,
+    positive_count = positive_count + excluded.positive_count,
+    negative_count = negative_count + excluded.negative_count,
+    canonical_answer = excluded.canonical_answer,
+    updated_at = excluded.updated_at`)
+    .bind(fingerprint, question, normalizedQuestion, answer, domain, subIntent, JSON.stringify(refs), positive, negative, now, now).run();
+  const candidate = await env.DB.prepare("SELECT id, occurrence_count FROM faq_candidates WHERE fingerprint = ?")
+    .bind(fingerprint).first();
+  const feedbackResult = await env.DB.prepare(`INSERT INTO chat_feedback (
+    response_id, session_hash, rating, reason, comment, redacted_question, normalized_question,
+    answer_text, domain, sub_intent, source_refs_json, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(
+      body.response_id || null,
+      await sha256(body.session_id),
+      body.rating,
+      body.reason || null,
+      comment,
+      question,
+      normalizedQuestion,
+      answer,
+      domain,
+      subIntent,
+      JSON.stringify(refs),
+      now,
+    ).run();
+  return json({
+    feedback_id: Number(feedbackResult?.meta?.last_row_id || 0),
+    faq_candidate_id: Number(candidate?.id || 0),
+    merged_occurrences: Number(candidate?.occurrence_count || 1),
+  }, 201);
+}
+
 async function handleApi(request, env, url) {
   if (url.pathname === "/health" && request.method === "GET") {
     return json({
@@ -749,6 +866,7 @@ async function handleApi(request, env, url) {
   }
   if (url.pathname === "/api/chat" && request.method === "POST") return handleChat(request, env);
   if (url.pathname === "/api/handoff" && request.method === "POST") return handleHandoff(request, env);
+  if (url.pathname === "/api/feedback" && request.method === "POST") return handleFeedback(request, env);
   if (url.pathname === "/api/catalog/status" && request.method === "GET") {
     try {
       const remote = await readSupabaseCatalogStatus(env);

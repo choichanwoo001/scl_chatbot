@@ -8,10 +8,14 @@ import { clearSupabaseCatalogCache } from "../worker/supabase-catalog.js";
 function createDatabase() {
   const sessions = new Map();
   const handoffs = new Map();
+  const feedback = new Map();
+  const faqCandidates = new Map();
   const geminiUsage = new Map();
   return {
     sessions,
     handoffs,
+    feedback,
+    faqCandidates,
     geminiUsage,
     prepare(sql) {
       let values = [];
@@ -22,12 +26,26 @@ function createDatabase() {
             const lastTest = sessions.get(values[0]);
             return lastTest ? { last_test_json: lastTest } : null;
           }
+          if (sql.startsWith("SELECT id, occurrence_count FROM faq_candidates")) {
+            return faqCandidates.get(values[0]) || null;
+          }
           return null;
         },
         async run() {
           if (sql.startsWith("INSERT INTO chat_sessions")) sessions.set(values[0], values[1]);
           if (sql.startsWith("DELETE FROM chat_sessions")) sessions.delete(values[0]);
           if (sql.startsWith("INSERT INTO handoff_requests")) handoffs.set(values[0], values);
+          if (sql.startsWith("INSERT INTO faq_candidates")) {
+            const existing = faqCandidates.get(values[0]);
+            faqCandidates.set(values[0], existing
+              ? { ...existing, occurrence_count: existing.occurrence_count + 1 }
+              : { id: faqCandidates.size + 1, occurrence_count: 1 });
+          }
+          if (sql.startsWith("INSERT INTO chat_feedback")) {
+            const id = feedback.size + 1;
+            feedback.set(id, values);
+            return { success: true, meta: { changes: 1, last_row_id: id } };
+          }
           if (sql.startsWith("INSERT OR IGNORE INTO gemini_daily_usage") && !geminiUsage.has(values[0])) {
             geminiUsage.set(values[0], 0);
           }
@@ -183,6 +201,24 @@ test("uses exact SCL-code matches before keyword ranking", async () => {
 
   assert.equal(body.reply.kind, "test");
   assert.equal(body.reply.test.code, target.code);
+});
+
+test("computes requested-field coverage before returning a test card", async () => {
+  const target = catalog.find((item) => !item.container && item.tat && item.method);
+  assert.ok(target);
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: `${target.code} 검사 용기와 소요일`, require_live: false }),
+  }), apiEnv);
+  const body = await response.json();
+
+  assert.equal(body.reply.kind, "test");
+  assert.match(body.reply.text, /요청하신 정보/);
+  assert.match(body.reply.text, /확인하지 못한 항목/);
+  assert.match(body.reply.text, /소요일:/);
+  assert.equal(body.reply.answerability, "partial");
+  assert.equal(body.reply.claim_coverage, 0.5);
 });
 
 test("recognizes mixed-format five-character SCL codes", async () => {
@@ -490,6 +526,36 @@ test("encrypts and persists consented handoff requests", async () => {
   assert.ok(stored);
   assert.notEqual(stored[3], "홍길동");
   assert.notEqual(stored[4], "010-1234-5678");
+});
+
+test("persists answer feedback and merges the FAQ candidate bucket", async () => {
+  const payload = {
+    session_id: "feedback-session",
+    response_id: "gemini-response-1",
+    rating: "not_helpful",
+    reason: "missing_information",
+    comment: "전화번호 010-9999-8888은 저장하지 마세요.",
+    question: "HPV 검사 용기와 소요일",
+    answer: "검사 정보를 안내합니다.",
+    domain: "test",
+    sub_intent: "get_test_detail",
+    source_refs: ["test:16290:510", "https://unsafe.example"],
+  };
+  const first = await worker.fetch(new Request("https://example.test/api/feedback", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
+  }), apiEnv);
+  const second = await worker.fetch(new Request("https://example.test/api/feedback", {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
+  }), apiEnv);
+  const secondBody = await second.json();
+
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  assert.equal(secondBody.merged_occurrences, 2);
+  assert.equal(database.feedback.size, 2);
+  const latest = database.feedback.get(2);
+  assert.doesNotMatch(latest[4], /010-9999-8888/);
+  assert.deepEqual(JSON.parse(latest[10]), ["test:16290:510"]);
 });
 
 test("emits the files required by Sites packaging", async () => {

@@ -71,6 +71,10 @@ export function submitHandoff(payload) {
   return apiRequest("handoff", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export function submitFeedback(payload) {
+  return apiRequest("feedback", { method: "POST", body: JSON.stringify(payload) });
+}
+
 export function authenticateResults(payload) {
   return apiRequest("results/authenticate", { method: "POST", body: JSON.stringify(payload) });
 }

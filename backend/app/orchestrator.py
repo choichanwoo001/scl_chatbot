@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 
+from .answer_coverage import apply_test_answer_coverage
 from .chat_contracts import ModelPlan, ModeratedContent, RetrievalContext
 from .chat_grounding import GroundedReplyBuilder
 from .chat_policy import ChatPolicy
@@ -172,6 +173,8 @@ class ChatOrchestrator:
                 trusted_hits=trusted_hits,
                 trusted_tests=trusted_tests,
             )
+            if structured_reply is None:
+                reply = apply_test_answer_coverage(reply, plan.requested_fields, matched)
             if structured_reply is not None and not flags.requires_authentication and not flags.needs_handoff:
                 reply = structured_reply
                 matched = reply.test

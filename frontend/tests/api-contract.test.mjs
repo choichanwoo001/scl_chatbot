@@ -7,7 +7,7 @@ import { readSession, saveSession } from "../worker/session-store.js";
 
 function migratedDatabase() {
   const db = new DatabaseSync(":memory:");
-  for (const file of ["0000_real_thunderball.sql", "0001_dapper_ben_grimm.sql"]) {
+  for (const file of ["0000_real_thunderball.sql", "0001_dapper_ben_grimm.sql", "0002_keen_celestials.sql"]) {
     db.exec(readFileSync(new URL(`../drizzle/${file}`, import.meta.url), "utf8"));
   }
   return { db, prepare(sql) {

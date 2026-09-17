@@ -270,6 +270,8 @@ def query_reply(
         heading += " 공개 검사수가는 실제 본인부담금과 다를 수 있습니다."
     if missing:
         heading += "\n확인하지 못한 항목: " + "; ".join(missing)
+    expected_slot_count = len(shown) * len(dict.fromkeys(query.requested_fields or ["specimen", "tat"]))
+    covered_slot_count = max(0, expected_slot_count - len(missing))
     return Reply(
         kind="test" if len(items) == 1 else "text",
         test=items[0] if len(items) == 1 else None,
@@ -286,5 +288,6 @@ def query_reply(
         data_status="demo_data" if all(item.demo for item in items) else "public_database",
         grounding_status="grounded_internal",
         answerability="partial" if missing or not exhaustive or len(items) > len(shown) else "full",
+        claim_coverage=(covered_slot_count / expected_slot_count) if expected_slot_count else 1.0,
         missing_information=missing,
     )

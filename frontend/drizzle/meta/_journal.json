@@ -15,6 +15,13 @@
       "when": 1787810772105,
       "tag": "0001_dapper_ben_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789628974575,
+      "tag": "0002_keen_celestials",
+      "breakpoints": true
     }
   ]
 }

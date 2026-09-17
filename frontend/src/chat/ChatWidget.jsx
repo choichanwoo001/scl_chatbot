@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Bot, MessageCircleMore, Minus, Send, ShieldCheck, X } from "lucide-react";
 import { MessageBody } from "./MessageBody.jsx";
+import { FeedbackControls } from "./FeedbackControls.jsx";
 import { useChatController } from "./useChatController.js";
 
 const QUICK_QUESTIONS = [
@@ -35,7 +36,7 @@ export function ChatWidget() {
     <aside className="chat-panel" aria-label="SCL AI 챗봇" data-testid="chat-panel">
       <header className="chat-header">
         <div className="bot-mark"><img src="/assets/scl/scl-logo.svg" alt="" /></div>
-        <div><strong>SCL 챗봇</strong><span><i className={state.connectionMode === "gemini" ? "is-live" : ""} /> {state.connectionMode === "gemini" ? "Gemini 실시간" : state.connectionMode === "demo_fallback" ? "서버 검색 모드" : state.connectionMode === "checking" ? "연결 확인 중" : "서버 연결 오류"} · 시연용</span></div>
+        <div><strong>SCL 챗봇</strong><span><i className={state.connectionMode === "gemini" ? "is-live" : ""} /> {state.connectionMode === "gemini" ? "Gemini 실시간" : ["demo_fallback", "deterministic"].includes(state.connectionMode) ? "서버 검색 모드" : state.connectionMode === "checking" ? "연결 확인 중" : "서버 연결 오류"} · 시연용</span></div>
         <div className="chat-header-actions">
           <button type="button" onClick={() => actions.setOpen(false)} aria-label="챗봇 최소화"><Minus size={20} /></button>
           <button type="button" onClick={actions.closeSession} aria-label="채팅 세션 종료"><X size={20} /></button>
@@ -48,7 +49,8 @@ export function ChatWidget() {
             {message.role === "assistant" && <span className="message-avatar"><Bot size={17} /></span>}
             <div className="message-bubble">
               <MessageBody message={message} onQuickQuestion={actions.sendMessage} onAuthenticate={actions.authenticate}
-                onHandoff={actions.handoff} onResultSelect={actions.selectResult} />
+                onHandoff={(values) => actions.handoff(values, message)} onResultSelect={actions.selectResult} />
+              <FeedbackControls message={message} onSubmit={actions.feedback} />
             </div>
           </div>
         ))}
