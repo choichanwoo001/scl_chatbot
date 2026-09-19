@@ -259,10 +259,11 @@ test("the packaged catalog resolves D185000HZ only to its ALT billing-code match
 
   assert.equal(body.reply.kind, "choices");
   assert.equal(body.reply.choices.length, 2);
-  assert.ok(body.reply.choices.every((choice) => choice.includes("ALT")));
-  assert.ok(body.reply.choices.some((choice) => choice.includes("검사코드 10130")));
-  assert.ok(body.reply.choices.some((choice) => choice.includes("검사코드 10135")));
-  assert.ok(body.reply.choices.every((choice) => !choice.includes("40500")));
+  assert.ok(body.reply.choices.every((choice) => choice.label.includes("ALT")));
+  assert.ok(body.reply.choices.some((choice) => choice.label.includes("검사코드 10130")));
+  assert.ok(body.reply.choices.some((choice) => choice.label.includes("검사코드 10135")));
+  assert.ok(body.reply.choices.every((choice) => !choice.label.includes("40500")));
+  assert.ok(body.reply.choices.every((choice) => choice.url?.startsWith("https://www.scllab.co.kr/")));
 });
 
 test("a candidate button containing an exact test code bypasses follow-up filtering", async () => {
@@ -273,13 +274,13 @@ test("a candidate button containing an exact test code bypasses follow-up filter
     body: JSON.stringify({ session_id: sessionId, message: "D185000HZ 코드를 가진 검사가 있나?", require_live: false }),
   }), apiEnv);
   const firstBody = await first.json();
-  const selectedChoice = firstBody.reply.choices.find((choice) => choice.includes("검사코드 10135"));
+  const selectedChoice = firstBody.reply.choices.find((choice) => choice.label.includes("검사코드 10135"));
   assert.ok(selectedChoice);
 
   const selected = await worker.fetch(new Request("https://example.test/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ session_id: sessionId, message: selectedChoice, require_live: false }),
+    body: JSON.stringify({ session_id: sessionId, message: selectedChoice.label, require_live: false }),
   }), apiEnv);
   const selectedBody = await selected.json();
 

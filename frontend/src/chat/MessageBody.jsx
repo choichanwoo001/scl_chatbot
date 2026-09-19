@@ -191,7 +191,13 @@ export function MessageBody({ message, onQuickQuestion, onAuthenticate, onHandof
       return <TestReply message={message} />;
     case "choices":
       return <div><StructuredText text={message.text} /><div className="choice-list">
-        {message.choices.map((choice) => <button type="button" key={choice} onClick={() => onQuickQuestion(choice)}>{choice}</button>)}
+        {message.choices.map((choice) => {
+          const label = typeof choice === "string" ? choice : choice.label;
+          const url = typeof choice === "string" ? null : choice.url;
+          return url
+            ? <a key={`${label}-${url}`} href={url} target="_blank" rel="noreferrer">{label} <ExternalLink size={13} /></a>
+            : <button type="button" key={label} onClick={() => onQuickQuestion(label)}>{label}</button>;
+        })}
       </div></div>;
     default:
       return <TextReply message={message} />;

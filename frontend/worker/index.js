@@ -331,7 +331,10 @@ function publicTest(item) {
 }
 
 function testChoice(item) {
-  return `${item.name} · ${item.specimen} · 검사코드 ${item.code}`;
+  return {
+    label: `${item.name} · ${item.specimen} · 검사코드 ${item.code}`,
+    url: safeUrl(item.source_url),
+  };
 }
 
 function testReply(item, text = "확인된 SCL 공개 검사 항목입니다. 검사 조건은 아래 공개 데이터 카드에서 확인해 주세요.") {

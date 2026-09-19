@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Bot, MessageCircleMore, Minus, Send, ShieldCheck, X } from "lucide-react";
 import { MessageBody } from "./MessageBody.jsx";
-import { FeedbackControls } from "./FeedbackControls.jsx";
 import { useChatController } from "./useChatController.js";
 
 const QUICK_QUESTIONS = [
@@ -50,7 +49,6 @@ export function ChatWidget() {
             <div className="message-bubble">
               <MessageBody message={message} onQuickQuestion={actions.sendMessage} onAuthenticate={actions.authenticate}
                 onHandoff={(values) => actions.handoff(values, message)} onResultSelect={actions.selectResult} />
-              <FeedbackControls message={message} onSubmit={actions.feedback} />
             </div>
           </div>
         ))}
