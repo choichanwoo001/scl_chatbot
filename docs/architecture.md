@@ -81,7 +81,7 @@ FastAPI 8000과 Nginx 기반 프런트 8080을 노출한다. 백엔드 이미지
 | 벡터 인덱스 미설정·타임아웃 | RDB 키워드 검색으로 복귀 |
 | Gemini 호출 실패 + `require_live=true` | prepared 답변 없이 HTTP 503 |
 | Gemini 호출 실패 + 공개 UI `require_live=false` | 검증된 검색 fallback, `mode=demo_fallback` |
-| 결과 Gateway 미설정 | 인증 제출 시 명시적 실패, mock 결과 미노출 |
+| 결과 Gateway 미설정 | 인증 제출 시 명시적 실패, 비공식 결과 미노출 |
 | 공개 참조 불일치 | 모델이 선택한 참조와 답변 폐기 |
 | 첨부 추출 실패 | 상태를 분류해 저장하고 검증 스크립트에서 노출 |
 

@@ -179,7 +179,7 @@ npm run dev
 
 추가 API는 `POST /api/handoff`, `POST /api/feedback`, `POST /api/results/authenticate`,
 `GET /api/results`, `GET /api/results/{result_id}`, `DELETE /api/sessions/{session_id}`입니다.
-결과조회 API 정보가 준비되기 전에는 `RESULT_PROVIDER_MODE=unconfigured`로 둡니다. `mock`은 자동 테스트 전용이며 관리자 실시간 시연에는 사용하지 않습니다. 승인된 기관 Gateway가 준비되면 `RESULT_PROVIDER_MODE=http`과
+결과조회 API 정보가 준비되기 전에는 `RESULT_PROVIDER_MODE=unconfigured`로 둡니다. 승인된 기관 Gateway가 준비되면 `RESULT_PROVIDER_MODE=http`과
 `RESULT_API_*`를 설정합니다. Gateway 계약은 [OpenAPI 명세](docs/appendices/technical/result-provider-openapi.yaml), 보안·매핑
 설명은 [결과 Provider 문서](docs/appendices/technical/personal-results-provider.md)에 있습니다. 인증정보는 LLM provider, DB,
 브라우저 세션 저장소에 저장하지 않습니다.

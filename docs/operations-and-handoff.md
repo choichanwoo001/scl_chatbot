@@ -6,12 +6,10 @@
 
 | 프로필 | LLM | Vector | 저장소 | 결과 Provider | 목적 |
 |---|---|---|---|---|---|
-| 자동 테스트 | 없음 | 꺼짐 | 인메모리·임시 DB | mock·unconfigured | 비용 없는 결정적 검증 |
+| 자동 테스트 | 없음 | 꺼짐 | 인메모리·임시 DB | unconfigured·HTTP 계약 테스트 | 비용 없는 결정적 검증 |
 | 로컬 데모 | Gemini | 선택 | SQLite·메모리 세션 | unconfigured | UI·RDB 시연 |
 | 공개 Sites | Gemini 우선, 검색 fallback | Gemini 로컬 Index | D1 세션·상담·일일 호출량 | unconfigured | 제한된 공개 시연 |
 | 운영 후보 | 승인 provider | 품질 평가 후 활성 | PostgreSQL·공유 세션 | 승인된 HTTPS Gateway | 기관 승인 후 |
-
-`mock` 결과 Provider는 자동 테스트 전용이며 공개 시연·운영에 사용하지 않는다.
 
 ## 2. 필수 설정
 

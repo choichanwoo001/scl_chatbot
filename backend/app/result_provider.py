@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-import secrets
 import ssl
 import threading
 from dataclasses import dataclass
@@ -59,48 +58,6 @@ class UnconfiguredResultProvider:
 
     def get_result(self, provider_token: str, result_id: str) -> ResultDetail:
         raise ResultProviderUnavailable("SCL 개인 검사결과 API 연동 정보가 아직 설정되지 않았습니다.")
-
-    def logout(self, provider_token: str) -> None:
-        return None
-
-
-class MockResultProvider:
-    name = "mock"
-
-    def authenticate(self, user_id: str, password: str, identity_value: str) -> str:
-        if (user_id, password, identity_value) != ("demo-user", "demo-pass", "900101"):
-            raise ResultAuthenticationFailed("아이디, 비밀번호 또는 본인확인 정보를 확인해 주세요.")
-        return f"mock-{secrets.token_hex(12)}"
-
-    def list_results(self, provider_token: str) -> list[ResultListItem]:
-        self._validate(provider_token)
-        return [
-            ResultListItem(
-                result_id="MOCK-R-001",
-                test_name="HPV genotyping (시연)",
-                requested_at="2026-08-18",
-                status="reported",
-            )
-        ]
-
-    def get_result(self, provider_token: str, result_id: str) -> ResultDetail:
-        self._validate(provider_token)
-        if result_id != "MOCK-R-001":
-            raise KeyError(result_id)
-        return ResultDetail(
-            result_id=result_id,
-            test_name="HPV genotyping (시연)",
-            requested_at="2026-08-18",
-            reported_at="2026-08-20",
-            status="reported",
-            fields=[{"name": "결과", "value": "시연 데이터", "reference": None}],
-            notice="이 결과는 UI·연동 검증용 시연 데이터이며 실제 의료 결과가 아닙니다.",
-        )
-
-    @staticmethod
-    def _validate(token: str) -> None:
-        if not token.startswith("mock-"):
-            raise ResultSessionExpired("결과조회 인증이 만료되었습니다.")
 
     def logout(self, provider_token: str) -> None:
         return None
@@ -270,8 +227,6 @@ class ResultService:
     def __init__(self, settings: Settings, provider: ResultProvider | None = None) -> None:
         if provider is not None:
             self.provider = provider
-        elif settings.result_provider_mode == "mock":
-            self.provider = MockResultProvider()
         elif settings.result_provider_mode == "http":
             self.provider = HTTPResultProvider(settings)
         elif settings.result_provider_mode == "unconfigured":

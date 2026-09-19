@@ -92,7 +92,7 @@ Pytest에는 Starlette TestClient가 향후 `httpx2`로 이동한다는 deprecat
 - 별도 창 없이 채팅 안에서 인증 폼 표시
 - 비밀번호와 본인확인 정보가 password 입력으로 처리됨
 - 민감 결과 메시지는 sessionStorage에 저장하지 않음
-- 현재 관리자 런타임은 `result_provider=unconfigured`이며 mock 결과를 반환하지 않음
+- 현재 관리자 런타임은 `result_provider=unconfigured`이며 비공식 결과를 반환하지 않음
 - 기관 승인 결과 Gateway가 연결되기 전에는 실제 결과 제출 시 503으로 명확히 실패함
 
 ### 5. 상담 접수 — 정상

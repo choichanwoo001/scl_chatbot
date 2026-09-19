@@ -1,7 +1,8 @@
+import httpx
 import app.main as main_module
 from app.config import Settings
 from app.main import app, orchestrator
-from app.result_provider import MockResultProvider, ResultService
+from app.result_provider import HTTPResultProvider, ResultService
 from fastapi.testclient import TestClient
 
 client = TestClient(app)
@@ -181,14 +182,52 @@ def test_feedback_is_saved_and_returns_faq_candidate() -> None:
     assert response.json()["faq_candidate_id"] > 0
 
 
-def test_mock_result_api_never_returns_credentials(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    service = ResultService(Settings(), MockResultProvider())
+def test_result_api_never_returns_credentials(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/auth/sessions":
+            return httpx.Response(200, json={"access_token": "opaque-token", "expires_in": 120})
+        if request.url.path == "/v1/results":
+            return httpx.Response(
+                200,
+                json={
+                    "items": [
+                        {
+                            "result_id": "R-1",
+                            "test_name": "HPV",
+                            "requested_at": "2026-08-18",
+                            "status": "reported",
+                        }
+                    ],
+                    "next_cursor": None,
+                },
+            )
+        if request.url.path == "/v1/results/R-1":
+            return httpx.Response(
+                200,
+                json={
+                    "result_id": "R-1",
+                    "test_name": "HPV",
+                    "requested_at": "2026-08-18",
+                    "reported_at": "2026-08-20",
+                    "status": "reported",
+                    "fields": [{"name": "결과", "value": "보고 완료", "reference": None}],
+                    "notice": "의료적 해석은 담당 의료진과 상담하세요.",
+                },
+            )
+        return httpx.Response(204)
+
+    settings = Settings(
+        result_provider_mode="http",
+        result_api_base_url="https://results.example.test",
+    )
+    provider = HTTPResultProvider(settings, httpx.Client(transport=httpx.MockTransport(handler)))
+    service = ResultService(settings, provider)
     monkeypatch.setattr(main_module.services, "result_service", service)
     credentials = {
         "session_id": "api-result-session",
-        "user_id": "demo-user",
-        "password": "demo-pass",
-        "identity_value": "900101",
+        "user_id": "private-user",
+        "password": "private-password",
+        "identity_value": "private-identity",
     }
     authenticated = client.post("/api/results/authenticate", json=credentials)
     assert authenticated.status_code == 200
@@ -201,7 +240,7 @@ def test_mock_result_api_never_returns_credentials(monkeypatch) -> None:  # type
         params={"session_id": "api-result-session"},
     )
     assert detail.status_code == 200
-    assert "시연 데이터" in detail.text
+    assert "보고 완료" in detail.text
 
     ended = client.delete("/api/sessions/api-result-session")
     assert ended.status_code == 204

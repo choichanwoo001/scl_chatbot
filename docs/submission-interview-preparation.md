@@ -504,7 +504,7 @@ Vector 대상은 공개 문서, 추출 완료 첨부, 게시된 FAQ뿐이다.
 | 공개 UI `require_live=false` | 검증된 lexical/RDB fallback, `mode=demo_fallback` | 제한·장애 중 공개 검색 가용성 유지 |
 | Vector 미설정/오류 | lexical 결과 유지 | 검색 가용성 유지 |
 | 모델이 존재하지 않는 ref 선택 | 답변 폐기, no-source 안내 | 환각 출처 차단 |
-| 개인 결과 Provider 미설정 | 인증 제출 시 503 | mock 결과의 공개 노출 방지 |
+| 개인 결과 Provider 미설정 | 인증 제출 시 503 | 비공식 결과의 공개 노출 방지 |
 | 결과 인증 만료 | 401 및 재인증 안내 | 짧은 토큰 수명 |
 | OCR 실패 | 세부 상태 저장, validation 노출 | 실패를 숨기지 않음 |
 

@@ -3,7 +3,6 @@ import pytest
 from app.config import Settings
 from app.result_provider import (
     HTTPResultProvider,
-    MockResultProvider,
     ProviderAuthToken,
     ResultAuthenticationFailed,
     ResultProviderProtocolError,
@@ -26,39 +25,6 @@ def test_unconfigured_provider_fails_without_retaining_credentials() -> None:
         service.authenticate(payload)
 
     assert service._contexts == {}
-
-
-def test_mock_provider_authenticates_lists_details_and_clears_session() -> None:
-    service = ResultService(Settings(), MockResultProvider())
-    service.authenticate(
-        ResultCredentials(
-            session_id="result-session",
-            user_id="demo-user",
-            password="demo-pass",
-            identity_value="900101",
-        )
-    )
-
-    results = service.list_results("result-session")
-    detail = service.get_result("result-session", results[0].result_id)
-
-    assert results[0].test_name.endswith("(시연)")
-    assert detail.notice.startswith("이 결과는")
-    service.clear("result-session")
-    assert service._contexts == {}
-
-
-def test_mock_provider_rejects_invalid_credentials() -> None:
-    service = ResultService(Settings(), MockResultProvider())
-    with pytest.raises(ResultAuthenticationFailed):
-        service.authenticate(
-            ResultCredentials(
-                session_id="result-session",
-                user_id="wrong",
-                password="wrong",
-                identity_value="0000",
-            )
-        )
 
 
 def test_http_provider_authenticates_pages_and_maps_detail() -> None:
