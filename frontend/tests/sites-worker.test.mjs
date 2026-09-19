@@ -265,6 +265,29 @@ test("the packaged catalog resolves D185000HZ only to its ALT billing-code match
   assert.ok(body.reply.choices.every((choice) => !choice.includes("40500")));
 });
 
+test("a candidate button containing an exact test code bypasses follow-up filtering", async () => {
+  const sessionId = "exact-code-choice-session";
+  const first = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: "D185000HZ 코드를 가진 검사가 있나?", require_live: false }),
+  }), apiEnv);
+  const firstBody = await first.json();
+  const selectedChoice = firstBody.reply.choices.find((choice) => choice.includes("검사코드 10135"));
+  assert.ok(selectedChoice);
+
+  const selected = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, message: selectedChoice, require_live: false }),
+  }), apiEnv);
+  const selectedBody = await selected.json();
+
+  assert.equal(selectedBody.reply.kind, "test");
+  assert.equal(selectedBody.reply.test.code, "10135");
+  assert.equal(selectedBody.sub_intent, null);
+});
+
 test("filters remembered code candidates by field and carries the term into a short follow-up", async () => {
   const sessionId = "field-followup-session";
   const first = await worker.fetch(new Request("https://example.test/api/chat", {

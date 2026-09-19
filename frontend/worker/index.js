@@ -603,7 +603,8 @@ async function handleChat(request, env) {
   try { sessionState = await readSession(env, sessionId); } catch (error) { console.error("D1 session read failed", error); }
   const lastTest = sessionState?.last_test || (sessionState?.code ? sessionState : null);
   const previousTests = Array.isArray(sessionState?.previous_tests) ? sessionState.previous_tests : [];
-  const contextual = previousTests.length
+  const requestedCodes = codeCandidates(inspection.modelInput);
+  const contextual = previousTests.length && !requestedCodes.length
     ? contextualCandidateReply(inspection.modelInput, previousTests, sessionState?.last_filter)
     : null;
   if (contextual) {
@@ -636,7 +637,6 @@ async function handleChat(request, env) {
   }
   let tests = rankTests(inspection.modelInput);
   let publicHits = rankPublic(inspection.modelInput);
-  const requestedCodes = codeCandidates(inspection.modelInput);
   if (requestedCodes.length) publicHits = [];
   let catalogSource = "snapshot";
   try {
