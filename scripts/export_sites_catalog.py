@@ -24,6 +24,11 @@ def compact_details(raw: str | dict | None) -> dict[str, str]:
         "검사정보",
         "참고치",
         "검사방법",
+        "보존방법",
+        "검사수가",
+        "용기 첨가제",
+        "용기 주요검사항목",
+        "용기 주의사항/참고",
     )
     result: dict[str, str] = {}
     for key in preferred:
@@ -62,7 +67,7 @@ def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
                COALESCE(tv.schedule_text, '정보 없음') AS schedule,
                COALESCE(tv.tat_text, '정보 없음') AS tat,
                tv.detail_url AS source_url, tv.last_seen_at AS updated_at,
-               d.fields_json
+               d.fields_json, d.container_json
         FROM test_variants tv
         JOIN tests t ON t.id = tv.test_id
         JOIN data_sources ds ON ds.id = t.data_source_id
@@ -90,6 +95,15 @@ def export_catalog(connection) -> None:  # type: ignore[no-untyped-def]
             "public_details": compact_details(row["fields_json"]),
             "billing_codes": billing_codes.get(row["id"], []),
         }
+        container_values = (
+            row["container_json"]
+            if isinstance(row["container_json"], dict)
+            else json.loads(row["container_json"] or "{}")
+        )
+        for key, value in container_values.items():
+            text = str(value or "").strip()
+            if text:
+                item["public_details"][f"용기 {key}"] = text[:700]
         item["search"] = " ".join(
             str(value or "")
             for value in (

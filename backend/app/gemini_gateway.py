@@ -21,6 +21,7 @@ from .query_interpretation import (
     QueryInterpretation,
     code_candidates,
     execute_query,
+    normalize_interpretation,
     query_reply,
     validate_query,
 )
@@ -77,9 +78,10 @@ class GeminiGateway:
             },
             ensure_ascii=False,
         )
-        return self._generate(
+        query, response_id = self._generate(
             QueryInterpretation, INTERPRET_INSTRUCTIONS, [{"role": "user", "parts": [{"text": context}]}]
         )
+        return normalize_interpretation(query, message, previous), response_id
 
     def retrieve_interpreted(
         self,

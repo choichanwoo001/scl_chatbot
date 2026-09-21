@@ -7,6 +7,7 @@ from app.database import SessionLocal
 from app.models import DataSource, PublicDocument
 from app.normalization import normalize_search_text
 from app.orchestrator import ChatOrchestrator, SessionStore
+from app.public_search import SearchHit
 
 
 class FakeGateway:
@@ -120,6 +121,92 @@ def test_result_interpretation_enforces_auth_and_medical_handoff_flags() -> None
     assert response.needs_handoff is True
     assert response.medical_review_required is True
     assert response.safety_action == "handoff"
+
+
+def test_result_normality_question_uses_medical_handoff_without_model() -> None:
+    orchestrator = _orchestrator()
+    gateway = FakeGateway(error=AssertionError("model must not run"))
+    orchestrator.gateway = gateway
+
+    response = asyncio.run(orchestrator.respond("검사결과 수치가 정상인지 해석해줘", None))
+
+    assert response.reply.kind == "handoff_form"
+    assert "임의로 판단할 수 없습니다" in response.reply.text
+    assert response.medical_review_required is True
+    assert response.safety_action == "handoff"
+
+
+def test_high_confidence_navigation_and_location_queries_skip_model(monkeypatch) -> None:
+    orchestrator = _orchestrator()
+    gateway = FakeGateway(error=AssertionError("model must not run"))
+    orchestrator.gateway = gateway
+    route = SearchHit(
+        ref="route:1",
+        entity_type="route",
+        entity_id="1",
+        title="의뢰방법",
+        snippet="/front/check/howto_request.do",
+        source_url="https://www.scllab.co.kr/front/check/howto_request.do",
+        updated_at="2026-08-20",
+        score=100,
+    )
+    location = SearchHit(
+        ref="location:1",
+        entity_type="location",
+        entity_id="1",
+        title="대구",
+        snippet="대구광역시 테스트로 1 · 053-000-0000",
+        source_url="https://www.scllab.co.kr/front/about/network_list.do",
+        updated_at="2026-08-20",
+        score=100,
+    )
+
+    def search(query, types, limit):
+        return [route] if "route" in types else [location]
+
+    monkeypatch.setattr(orchestrator.public_search, "search", search)
+    route_response = asyncio.run(orchestrator.respond("검사 의뢰 방법이 어디에 나와 있어?", None))
+    location_response = asyncio.run(
+        orchestrator.respond("대구 SCL 지점 주소와 전화번호 알려줘", None)
+    )
+
+    assert route_response.reply.citations[0].ref == "route:1"
+    assert location_response.reply.citations[0].ref == "location:1"
+    assert "053-000-0000" in location_response.reply.text
+
+
+def test_recent_new_test_notice_is_sorted_by_date(monkeypatch) -> None:
+    orchestrator = _orchestrator()
+    orchestrator.gateway = FakeGateway(error=AssertionError("model must not run"))
+    older = SearchHit(
+        ref="document:1",
+        entity_type="document",
+        entity_id="1",
+        title="2017 신규검사 안내",
+        snippet=None,
+        source_url="https://www.scllab.co.kr/old",
+        updated_at="2017-01-01",
+        score=100,
+    )
+    newer = SearchHit(
+        ref="document:2",
+        entity_type="document",
+        entity_id="2",
+        title="2026 신규검사 안내",
+        snippet=None,
+        source_url="https://www.scllab.co.kr/new",
+        updated_at="2026-08-01",
+        score=50,
+    )
+    monkeypatch.setattr(
+        orchestrator.public_search,
+        "recent_documents",
+        lambda *args, **kwargs: [newer, older],
+    )
+
+    response = asyncio.run(orchestrator.respond("최근 신규검사 안내 공문 찾아줘", None))
+
+    assert response.reply.citations[0].title == "2026 신규검사 안내"
 
 
 def test_document_plan_without_model_ref_uses_matching_public_document() -> None:

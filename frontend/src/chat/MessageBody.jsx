@@ -34,13 +34,35 @@ function InlineText({ children }) {
   });
 }
 
-function StructuredText({ text, emphasizeFirst = false }) {
+function catalogTestEntry(blocks, index) {
+  const block = blocks[index];
+  if (block?.type !== "paragraph") return null;
+
+  const match = block.text.match(/^(.+?)\s+\(검사코드\s+([^)]+)\)$/);
+  const nextBlock = blocks[index + 1];
+  const hasTestFacts = nextBlock?.type === "facts" && nextBlock.items.some((item) => item.label === "검체");
+  return match && hasTestFacts ? { name: match[1], code: match[2], label: block.text } : null;
+}
+
+function citationForTest(citations, testName) {
+  return citations.find((citation) => citation.url && citation.title?.trim() === testName.trim());
+}
+
+function StructuredText({ text, emphasizeFirst = false, testCitations = [] }) {
   const blocks = parseStructuredText(text);
   const hasStructure = blocks.length > 1 || blocks.some((block) => block.type !== "paragraph");
 
   return (
     <div className="structured-answer">
       {blocks.map((block, index) => {
+        const testEntry = catalogTestEntry(blocks, index);
+        if (testEntry) {
+          const citation = citationForTest(testCitations, testEntry.name);
+          return citation
+            ? <a className="test-title-link" key={`${testEntry.code}-${citation.url}`} href={citation.url} target="_blank" rel="noreferrer" aria-label={`${testEntry.label} 상세 보기`}>{testEntry.label}</a>
+            : <p className="test-title-link" key={`${testEntry.code}-${index}`}>{testEntry.label}</p>;
+        }
+        if (block.type === "facts" && catalogTestEntry(blocks, index - 1)) return null;
         if (block.type === "heading") {
           return <h3 className="answer-heading" key={`${block.type}-${index}`}><InlineText>{block.text}</InlineText></h3>;
         }
@@ -84,18 +106,30 @@ function splitSentences(text) {
   return sentences?.length ? sentences : [String(text)];
 }
 
-function TestDescription({ text, testName }) {
+function groupByMeaning(text) {
   const sentences = splitSentences(text);
-  const emphasizedTerm = testName?.replace(/^\([^)]*\)\s*/, "").trim();
-  const guidanceIndex = sentences.findIndex((sentence, index) => (
-    index > 0 && /(결과 확인|상담|문의|의뢰|폼)/.test(sentence)
-  ));
-  const summary = guidanceIndex > 0 ? sentences.slice(0, guidanceIndex) : sentences;
-  const guidance = guidanceIndex > 0 ? sentences.slice(guidanceIndex) : [];
+  const groups = [];
 
-  const renderText = (sentence) => {
-    if (!emphasizedTerm || !sentence.includes(emphasizedTerm)) return sentence;
-    return sentence.split(emphasizedTerm).map((part, index) => (
+  for (const sentence of sentences) {
+    const isGuidance = /(확인(?:해|하여| 바랍니다|이 필요)|문의|상담|의뢰|권장|주의)/.test(sentence);
+    const previous = groups.at(-1);
+    if (previous && previous.isGuidance === isGuidance) {
+      previous.text += ` ${sentence}`;
+    } else {
+      groups.push({ text: sentence, isGuidance });
+    }
+  }
+
+  return groups;
+}
+
+function TestDescription({ text, testName }) {
+  const groups = groupByMeaning(text);
+  const emphasizedTerm = testName?.replace(/^\([^)]*\)\s*/, "").trim();
+
+  const renderText = (value) => {
+    if (!emphasizedTerm || !value.includes(emphasizedTerm)) return value;
+    return value.split(emphasizedTerm).map((part, index) => (
       index === 0
         ? part
         : <span key={`${part}-${index}`}><strong className="test-term">{emphasizedTerm}</strong>{part}</span>
@@ -105,30 +139,28 @@ function TestDescription({ text, testName }) {
   return (
     <div className="test-description">
       <div className="test-description-summary">
-        {summary.map((sentence, index) => <p key={`${sentence}-${index}`}>{renderText(sentence)}</p>)}
+        {groups.map((group, index) => (
+          <p className={group.isGuidance ? "is-guidance" : undefined} key={`${group.text}-${index}`}>{renderText(group.text)}</p>
+        ))}
       </div>
-      {guidance.length ? (
-        <aside className="test-description-guidance">
-          <strong>결과 확인 안내</strong>
-          <p>{guidance.map((sentence, index) => (
-            <span key={`${sentence}-${index}`}>{index > 0 ? " " : ""}{renderText(sentence)}</span>
-          ))}</p>
-        </aside>
-      ) : null}
     </div>
   );
 }
 
 function TextReply({ message }) {
+  const blocks = parseStructuredText(message.text);
+  const inlineTestNames = new Set(blocks.map((_, index) => catalogTestEntry(blocks, index)?.name).filter(Boolean));
+  const remainingCitations = message.citations?.filter((citation) => !inlineTestNames.has(citation.title?.trim()));
+
   return (
     <div>
       {message.role === "assistant"
-        ? <StructuredText text={message.text} emphasizeFirst={message.liveGenerated && !message.error} />
+        ? <StructuredText text={message.text} emphasizeFirst={message.liveGenerated && !message.error} testCitations={message.citations} />
         : <p>{message.text}</p>}
       <GroundingStatus message={message} />
-      {message.citations?.length ? (
+      {remainingCitations?.length ? (
         <div className="citation-list">
-          {message.citations.map((citation) => citation.url ? (
+          {remainingCitations.map((citation) => citation.url ? (
             <a key={`${citation.title}-${citation.url}`} href={citation.url} target="_blank" rel="noreferrer">
               <span>{SOURCE_LABELS[citation.source_tier] || "출처"}</span>
               <strong>{citation.title}</strong>
@@ -143,19 +175,21 @@ function TextReply({ message }) {
 }
 
 function TestReply({ message }) {
+  const intro = String(message.text || "").split(/\n\s*\n/)[0].trim();
+  const testLabel = `${message.test.name} (검사코드 ${message.test.code})`;
+
   return (
     <div className="test-result-card">
-      <TestDescription text={message.text} testName={message.test.name} />
-      <div className="test-card-heading"><span>검사코드 {message.test.code}</span><strong>{message.test.name}</strong></div>
+      {intro ? <TestDescription text={intro} testName={message.test.name} /> : null}
+      {message.test.source_url
+        ? <a className="test-card-heading test-title-link" href={message.test.source_url} target="_blank" rel="noreferrer" aria-label={`${testLabel} 상세 보기`}>{testLabel}</a>
+        : <div className="test-card-heading test-title-link">{testLabel}</div>}
       <dl>
         <div><dt>검체/용기</dt><dd>{message.test.specimen}{message.test.container ? ` / ${message.test.container}` : ""}</dd></div>
         <div><dt>검사방법</dt><dd>{message.test.method}</dd></div>
         <div><dt>검사일</dt><dd>{message.test.schedule}</dd></div>
         <div><dt>소요일</dt><dd>{message.test.tat}</dd></div>
       </dl>
-      {message.test.source_url ? (
-        <a className="source-link" href={message.test.source_url} target="_blank" rel="noreferrer">검사 상세 보기 <ExternalLink size={14} /></a>
-      ) : null}
       <p className="source-note">출처: {message.test.source_title || "SCL 검사항목 조회"} · {message.test.demo === false ? "공개 문서" : "데모 데이터"} {message.test.updated_at || "2026-08-15"}</p>
     </div>
   );
@@ -177,6 +211,15 @@ function ResultDetailReply({ message }) {
   </div>;
 }
 
+function TestChoice({ choice, onQuickQuestion }) {
+  const label = choice.label;
+  const testLabel = `${choice.name} (검사코드 ${choice.code})`;
+
+  return choice.url
+    ? <a className="test-choice-button test-title-link" href={choice.url} target="_blank" rel="noreferrer" aria-label={`${testLabel} 상세 보기`}>{testLabel}</a>
+    : <button className="test-choice-button test-title-link" type="button" onClick={() => onQuickQuestion(label)}>{testLabel}</button>;
+}
+
 export function MessageBody({ message, onQuickQuestion, onAuthenticate, onHandoff, onResultSelect }) {
   switch (message.kind) {
     case "result_auth_form":
@@ -194,6 +237,9 @@ export function MessageBody({ message, onQuickQuestion, onAuthenticate, onHandof
         {message.choices.map((choice) => {
           const label = typeof choice === "string" ? choice : choice.label;
           const url = typeof choice === "string" ? null : choice.url;
+          if (typeof choice !== "string" && choice.name && choice.code) {
+            return <TestChoice key={`${choice.code}-${choice.specimen}-${label}`} choice={choice} onQuickQuestion={onQuickQuestion} />;
+          }
           return url
             ? <a key={`${label}-${url}`} href={url} target="_blank" rel="noreferrer">{label} <ExternalLink size={13} /></a>
             : <button type="button" key={label} onClick={() => onQuickQuestion(label)}>{label}</button>;

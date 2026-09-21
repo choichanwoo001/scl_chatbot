@@ -3,12 +3,6 @@ import { Bot, MessageCircleMore, Minus, Send, ShieldCheck, X } from "lucide-reac
 import { MessageBody } from "./MessageBody.jsx";
 import { useChatController } from "./useChatController.js";
 
-const QUICK_QUESTIONS = [
-  "갑상선 관련 검사 알려줘",
-  "HPV 검사 용기와 소요일",
-  "2026년 8월 연휴 검사일정 공문",
-];
-
 export function ChatWidget() {
   const { state, actions } = useChatController();
   const listRef = useRef(null);
@@ -58,9 +52,6 @@ export function ChatWidget() {
             <div className="message-bubble typing-indicator"><i /><i /><i /></div>
           </div>
         )}
-        {state.messages.length === 1 && <div className="quick-questions">{QUICK_QUESTIONS.map((question) => (
-          <button type="button" key={question} onClick={() => actions.sendMessage(question)} disabled={state.isSending}>{question}</button>
-        ))}</div>}
       </div>
       <form className="chat-composer" onSubmit={submit}>
         <label htmlFor="chat-input" className="sr-only">질문 입력</label>

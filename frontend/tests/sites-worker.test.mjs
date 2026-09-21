@@ -69,6 +69,16 @@ function createDatabase() {
 const database = createDatabase();
 const apiEnv = { DB: database };
 
+async function askStandalone(message, sessionId = undefined) {
+  const response = await worker.fetch(new Request("https://example.test/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message, session_id: sessionId, require_live: false }),
+  }), apiEnv);
+  assert.equal(response.status, 200);
+  return response.json();
+}
+
 test("serves existing static assets without a fallback", async () => {
   const calls = [];
   const response = await worker.fetch(new Request("https://example.test/assets/app.js"), {
@@ -263,7 +273,55 @@ test("the packaged catalog resolves D185000HZ only to its ALT billing-code match
   assert.ok(body.reply.choices.some((choice) => choice.label.includes("검사코드 10130")));
   assert.ok(body.reply.choices.some((choice) => choice.label.includes("검사코드 10135")));
   assert.ok(body.reply.choices.every((choice) => !choice.label.includes("40500")));
+  assert.ok(body.reply.choices.every((choice) => choice.name && choice.code && choice.specimen && choice.tat));
   assert.ok(body.reply.choices.every((choice) => choice.url?.startsWith("https://www.scllab.co.kr/")));
+});
+
+test("answers multi-field HPV questions by specimen instead of returning an unrelated document", async () => {
+  const body = await askStandalone("HPV 검사의 검체, 용기, 검사방법, 소요일을 한 번에 알려줘");
+
+  assert.equal(body.mode, "deterministic");
+  assert.equal(body.reply.kind, "text");
+  assert.match(body.reply.text, /Vaginal\/Cervical Swab 검체/);
+  assert.match(body.reply.text, /Cervix cell 검체/);
+  assert.match(body.reply.text, /PBS\(Phosphate buffer solution\)/);
+  assert.match(body.reply.text, /세포보존제/);
+  assert.match(body.reply.text, /검사방법:/);
+  assert.match(body.reply.text, /소요일:/);
+});
+
+test("lists thyroid candidates with exactly the requested specimen field", async () => {
+  const body = await askStandalone("갑상선 검사 후보별로 검사코드와 검체를 같이 보여줘");
+
+  assert.equal(body.mode, "deterministic");
+  assert.match(body.reply.text, /TSH \(검사코드 50040\)/);
+  assert.match(body.reply.text, /검체: Serum/);
+  assert.doesNotMatch(body.reply.text, /검사요일:/);
+  assert.doesNotMatch(body.reply.text, /소요일:/);
+});
+
+test("filters liver-related tests by Saturday schedule", async () => {
+  const body = await askStandalone("간수치 검사 중 토요일에도 하는 검사가 뭐야?");
+
+  assert.equal(body.mode, "deterministic");
+  assert.match(body.reply.text, /검사요일: .*토/);
+  assert.doesNotMatch(body.reply.text, /근거를 찾지 못했습니다/);
+});
+
+test("recognizes the common specimen typo and limits the ALT response fields", async () => {
+  const body = await askStandalone("ALT검사 소요기간하고 검채 알려줘");
+
+  assert.equal(body.reply.kind, "test");
+  assert.match(body.reply.text, /검체: Serum/);
+  assert.match(body.reply.text, /소요일: 1일/);
+});
+
+test("explains a mixed-format test code from verified catalog data", async () => {
+  const body = await askStandalone("R0329가 무슨 검사야?");
+
+  assert.equal(body.reply.kind, "test");
+  assert.equal(body.reply.test.code, "R0329");
+  assert.match(body.reply.text, /R0329는 .* 검사입니다|SCL 공개 자료에서/);
 });
 
 test("a candidate button containing an exact test code bypasses follow-up filtering", async () => {

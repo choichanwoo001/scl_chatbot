@@ -12,6 +12,8 @@ Before making substantial visual changes, use the Product Design plugin's `get-c
 - The prototype must keep a small label explaining that it is a demonstration and must not be presented as the live SCL service.
 - Chatbot answers should prioritize scanability: lead with a direct summary, then use short section headings, compact lists or label/value rows, and visually distinct caution notes. Preserve concise one-sentence replies without unnecessary decoration.
 - Improve dense answer readability through paragraph grouping, section labels, spacing, and contrast before considering any font-size changes; preserve the established chatbot type scale unless the user explicitly requests resizing.
+- Whenever a test is shown in chatbot search results or details, present its linked title in one line as `{test name} (검사코드 {code})`; keep any explanation or test metadata below or elsewhere instead of splitting the title and link across rows.
+- In a single-test result, separate the explanatory copy into meaning-based paragraphs, then show the linked one-line test title followed by the complete specimen, method, schedule, and turnaround rows.
 
 When implementing from a selected generated mock, treat that image as the source of truth for layout, component anatomy, density, spacing, color, typography, visible content, and hierarchy.
 

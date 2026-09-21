@@ -6,10 +6,7 @@ export const welcomeMessage = {
   kind: "text",
   text: `궁금한 검사 정보를 빠르게 찾아드릴게요.
 
-## 이런 내용을 물어보세요
-- 검사명 또는 검사코드
-- 검체·용기 정보
-- 검사일·소요일`,
+검사명·코드, 검체·용기, 검사일·소요일을 물어보세요.`,
 };
 
 export function loadChatSession(storage = window.sessionStorage) {

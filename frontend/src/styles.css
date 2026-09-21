@@ -116,6 +116,7 @@ a { color: inherit; text-decoration: none; }
 .message-bubble { max-width: 91%; padding: 12px 13px; border: 1px solid rgba(216,228,241,.78); border-radius: 4px 14px 14px 14px; background: #fff; box-shadow: 0 4px 16px rgba(24,56,94,.08); font-size: 13px; line-height: 1.58; }
 .message-bubble p { margin: 0; }
 .message-bubble:has(.form-error) { border-color: #e9b9b9; }
+.message.assistant .message-bubble:has(.test-result-card) { width: 91%; }
 .message.user .message-bubble { max-width: 86%; border: 0; border-radius: 14px 4px 14px 14px; background: #2c69a9; color: #fff; box-shadow: none; }
 .structured-answer { display: grid; gap: 9px; }
 .answer-summary { display: grid; gap: 4px; padding: 10px 11px; border: 1px solid #d6e5f4; border-radius: 10px; background: linear-gradient(135deg, #f3f8fd, #edf5fc); }
@@ -136,20 +137,26 @@ a { color: inherit; text-decoration: none; }
 .answer-callout strong { font-size: 10px; }
 .answer-callout.is-warning { background: #fff6e8; color: #755022; }
 .structured-answer code { padding: 1px 4px; border-radius: 4px; background: #edf2f7; color: #244f79; font-family: Consolas, monospace; font-size: .9em; }
-.quick-questions { display: flex; flex-wrap: wrap; gap: 7px; margin: 4px 0 18px 36px; }
-.quick-questions button, .choice-list button, .choice-list a { border: 1px solid #bad0e7; border-radius: 999px; background: #fff; color: #295f97; padding: 8px 10px; font-size: 11px; text-align: left; }
+.test-title-link { display: block; padding: 8px 10px; border: 1px solid #d6e1ec; border-radius: 9px; background: #fff; color: #263d59; font-size: 11px; font-weight: 500; line-height: 1.45; text-decoration: none; }
+a.test-title-link:hover { border-color: #9cb9d5; background: #f8fbfe; }
+a.test-title-link:focus-visible { outline: 3px solid rgba(60,119,180,.18); outline-offset: 2px; }
+.choice-list button, .choice-list a { border: 1px solid #d4e0ec; border-radius: 8px; background: #fff; color: #496b8d; padding: 7px 9px; font-size: 11px; text-align: left; }
 .choice-list { display: grid; gap: 6px; margin-top: 10px; }
 .choice-list button, .choice-list a { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-radius: 8px; text-decoration: none; }
-.test-description { display: grid; gap: 10px; margin-bottom: 12px; color: #273b52; }
-.test-description-summary { display: grid; gap: 7px; }
+.choice-list .test-choice-button { display: block; min-height: 34px; }
+.choice-list .test-choice-button:hover { border-color: #9cb9d5; background: #f8fbfe; }
+.choice-list .test-choice-button:focus-visible { outline: 3px solid rgba(60,119,180,.18); outline-offset: 2px; }
+.test-description { display: grid; gap: 10px; margin-bottom: 14px; color: #273b52; }
+.test-description-summary { display: grid; gap: 10px; }
 .test-description-summary p { line-height: 1.68; }
+.test-description-summary p.is-guidance { color: #38536e; }
 .test-term { color: #184f85; font-weight: 700; }
 .test-description-guidance { display: grid; gap: 4px; padding: 8px 10px; border-left: 3px solid #73a3d0; border-radius: 0 8px 8px 0; background: #f5f8fc; color: #415a73; }
 .test-description-guidance > strong { color: #2d6397; font-weight: 700; }
 .test-description-guidance p { line-height: 1.58; }
-.test-card-heading { display: flex; flex-direction: column; gap: 3px; padding: 10px; border: 1px solid #dce8f4; background: #eef5fc; border-radius: 9px; }
-.test-card-heading span { color: #54708d; font-size: 10px; }
-.test-card-heading strong { color: #1d4f84; font-size: 14px; }
+.test-card-heading { padding: 9px 11px; border-color: #dce8f4; background: #eef4fb; color: #274f82; font-size: 12px; font-weight: 600; }
+a.test-card-heading:hover { border-color: #9cb9d5; background: #e8f1fa; }
+a.test-card-heading:focus-visible { outline: 3px solid rgba(60,119,180,.18); outline-offset: 2px; }
 .test-result-card dl { margin: 8px 0 9px; border-top: 1px solid #e2e9f0; }
 .test-result-card dl div { display: grid; grid-template-columns: 72px 1fr; gap: 8px; padding: 6px 1px; border-bottom: 1px solid #e2e9f0; }
 .test-result-card dt { color: #566b82; font-size: 11px; font-weight: 600; }

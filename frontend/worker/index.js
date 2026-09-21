@@ -333,6 +333,10 @@ function publicTest(item) {
 function testChoice(item) {
   return {
     label: `${item.name} · ${item.specimen} · 검사코드 ${item.code}`,
+    name: item.name,
+    code: item.code,
+    specimen: item.specimen,
+    tat: item.tat,
     url: safeUrl(item.source_url),
   };
 }
@@ -356,15 +360,212 @@ function testReply(item, text = "확인된 SCL 공개 검사 항목입니다. �
   };
 }
 
+const CONCEPT_TEST_NAMES = {
+  thyroid: ["TSH", "Free T4", "Free T3", "T3", "T4"],
+  liver: ["ALT", "AST", "γ-GTP", "ALP", "Bilirubin,total", "Bilirubin total"],
+};
+
+function canonicalTestName(item) {
+  return String(item.name || "").replace(/^\([^)]*\)\s*/, "").trim();
+}
+
+function testCitation(item) {
+  return {
+    title: item.name,
+    ref: `test:${item.variant_key || item.code}`,
+    url: safeUrl(item.source_url),
+    updated_at: item.updated_at,
+    source_tier: "internal_scl",
+    claim_ids: ["verified-test"],
+  };
+}
+
+function uniqueTests(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = item.variant_key || `${item.code}:${item.specimen}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function fieldValue(item, field) {
+  const details = item.public_details || {};
+  const direct = {
+    billing: details["급여코드"] || item.billing_codes?.join(", "),
+    specimen: item.specimen,
+    container: item.container,
+    method: item.method || details["검사방법"],
+    schedule: item.schedule,
+    tat: item.tat,
+    precautions: details["채취방법 및 주의사항"],
+    clinical_significance: details["임상적 의의"],
+    storage: details["보존방법"],
+    price: details["검사수가"],
+  }[field];
+  if (field !== "container" || direct) return direct;
+  const values = [];
+  if (details["용기 첨가제"]) values.push(`첨가제: ${details["용기 첨가제"]}`);
+  if (details["용기 주요검사항목"]) values.push(`주요 항목: ${details["용기 주요검사항목"]}`);
+  if (!values.length && details["용기 주의사항/참고"]) values.push(details["용기 주의사항/참고"]);
+  return values.join(" · ") || null;
+}
+
+const FIELD_LABELS = {
+  billing: "급여코드",
+  specimen: "검체",
+  container: "용기",
+  method: "검사방법",
+  schedule: "검사요일",
+  tat: "소요일",
+  precautions: "주의사항",
+  clinical_significance: "임상적 의의",
+  storage: "검체 보존방법",
+  price: "공개 검사수가",
+};
+
+function missingFieldText(field) {
+  if (field === "container") return "SCL 공개 페이지에서 용기 정보를 확인하지 못함";
+  if (field === "precautions") return "SCL 공개 페이지에 별도 주의사항 미기재";
+  if (field === "clinical_significance") return "SCL 공개 페이지에 별도 설명 미기재";
+  return "SCL 공개 페이지에 별도 기재되지 않음";
+}
+
+function compactPublicText(value, maxChars = 240) {
+  const text = String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length <= maxChars ? text : `${text.slice(0, maxChars - 2).trim()} …`;
+}
+
+function textReply(text, items, { answerability = "full", missing = [] } = {}) {
+  return {
+    kind: "text",
+    text,
+    test: null,
+    choices: [],
+    citations: uniqueTests(items).map(testCitation),
+    data_status: "public_database",
+    grounding_status: "grounded_internal",
+    answerability,
+    claim_coverage: answerability === "full" ? 1 : 0.75,
+    missing_information: missing,
+  };
+}
+
+function fieldAnswerReply(items, slots, query) {
+  const fields = [...new Set(slots.map(([field]) => field))];
+  const missing = [];
+  const displayed = (item, field) => {
+    const value = fieldValue(item, field);
+    if (value && String(value).trim() !== "-") return String(value).trim();
+    missing.push(`${item.name}: ${FIELD_LABELS[field]}`);
+    return missingFieldText(field);
+  };
+  if (items.length === 1) {
+    const item = items[0];
+    const facts = fields.map((field) => `- ${FIELD_LABELS[field]}: ${compactPublicText(displayed(item, field))}`);
+    const reply = testReply(item, `${item.name} (검사코드 ${item.code})의 요청하신 정보입니다.\n${facts.join("\n")}`);
+    return { ...reply, answerability: missing.length ? "partial" : "full", missing_information: missing };
+  }
+
+  const labels = fields.map((field) => FIELD_LABELS[field]).join("·");
+  const lines = [
+    fields.length === 1 && fields[0] === "container" && /hpv/i.test(query)
+      ? "HPV 검사는 검사 방식과 검체에 따라 사용하는 용기가 다릅니다."
+      : `조회된 검사들의 ${labels} 정보를 공통 값별로 정리했습니다.`,
+  ];
+  const cited = [];
+  if (fields.includes("specimen")) {
+    const groups = new Map();
+    for (const item of items) {
+      const specimen = displayed(item, "specimen");
+      if (!groups.has(specimen)) groups.set(specimen, []);
+      groups.get(specimen).push(item);
+    }
+    for (const [specimen, group] of groups) {
+      const parts = fields.filter((field) => field !== "specimen").map((field) => {
+        const values = [...new Set(group.map((item) => compactPublicText(displayed(item, field))))];
+        return `${FIELD_LABELS[field]}: ${values.join(", ")}`;
+      });
+      lines.push(`- ${specimen} 검체${parts.length ? `: ${parts.join(" · ")}` : ""}`);
+      cited.push(...group.slice(0, Math.max(1, parts.length)));
+    }
+  } else {
+    const groups = new Map();
+    for (const item of items) {
+      const values = fields.map((field) => compactPublicText(displayed(item, field)));
+      const key = JSON.stringify(values);
+      if (!groups.has(key)) groups.set(key, { values, items: [] });
+      groups.get(key).items.push(item);
+    }
+    for (const { values, items: groupedItems } of groups.values()) {
+      const specimens = [...new Set(groupedItems.map((item) => item.specimen).filter(Boolean))];
+      let context = groupedItems.slice(0, 3).map((item) => item.name).join(", ");
+      if (fields.length === 1 && fields[0] === "container" && specimens.length === 1) {
+        context = specimens[0] === "Cervix cell" ? "액상 HPV 검사" : "자궁경부·질 면봉을 이용한 HPV PCR";
+      }
+      const detail = fields.length === 1
+        ? values[0]
+        : fields.map((field, index) => `${FIELD_LABELS[field]}: ${values[index]}`).join(" · ");
+      lines.push(`- ${context}: ${detail}`);
+      cited.push(groupedItems[0]);
+    }
+  }
+  return textReply(lines.join("\n"), cited, {
+    answerability: missing.length ? "partial" : "full",
+    missing: [...new Set(missing)],
+  });
+}
+
+function listReply(items, intro, fields = []) {
+  const shown = uniqueTests(items).slice(0, items.length > 10 ? 8 : 20);
+  const lines = [`조건에 해당하는 검사 ${items.length}건입니다.`];
+  if (intro) lines.push(intro);
+  for (const item of shown) {
+    lines.push("", `${item.name} (검사코드 ${item.code})`);
+    for (const field of fields) {
+      const value = fieldValue(item, field);
+      lines.push(`${FIELD_LABELS[field]}: ${value || missingFieldText(field)}`);
+    }
+  }
+  if (items.length > shown.length) lines.push("", `결과가 많아 대표 ${shown.length}건만 표시했습니다.`);
+  return textReply(lines.join("\n"), shown);
+}
+
+function comparisonReply(items) {
+  const compared = items.slice(0, 2);
+  const fields = ["billing", "specimen", "method", "schedule", "tat", "precautions", "storage", "price"];
+  const common = [];
+  const differences = [];
+  for (const field of fields) {
+    const values = compared.map((item) => {
+      const raw = fieldValue(item, field);
+      if (!raw) return missingFieldText(field);
+      return field === "precautions" ? "상세 안내 있음" : compactPublicText(raw);
+    });
+    const line = `${FIELD_LABELS[field]}: ${values[0]}`;
+    if (values[0] === values[1]) common.push(line);
+    else differences.push(`- ${FIELD_LABELS[field]}: ${compared.map((item, index) => `${item.name}(${item.code}) ${values[index]}`).join(" · ")}`);
+  }
+  const lines = ["두 검사의 핵심 차이입니다."];
+  if (differences.length) lines.push("", "## 차이점", ...differences);
+  if (common.length) lines.push("", "## 공통점", `- ${common.join(" · ")}`);
+  return textReply(lines.join("\n"), compared);
+}
+
 function requestedFieldSlots(query) {
   const text = String(query || "");
   return [
     ["billing", "급여코드", /(?:급여|보험)\s*코드/i],
-    ["specimen", "검체", /검체/i],
-    ["container", "용기", /용기|튜브/i],
+    ["specimen", "검체", /검[체채]|피로\s*검사/i],
+    ["container", "용기", /용기|튜브|어떤\s*통|무슨\s*통|통에\s*담/i],
     ["method", "검사방법", /검사\s*방법|방법/i],
     ["schedule", "검사요일", /검사\s*(?:요일|일정)|(?<!소)요일/i],
-    ["tat", "소요일", /소요\s*일|며칠|얼마나\s*걸/i],
+    ["tat", "소요일", /소요\s*(?:일|기간)|며칠|얼마나\s*걸|결과.{0,8}(?:언제|빨리|빠르게)/i],
+    ["precautions", "주의사항", /주의\s*사항|주의할\s*점/i],
+    ["clinical_significance", "임상적 의의", /임상적\s*의의/i],
+    ["storage", "검체 보존방법", /보존\s*방법|어떻게\s*보관/i],
+    ["price", "공개 검사수가", /검사\s*수가|가격|비용/i],
   ].filter(([, , pattern]) => pattern.test(text));
 }
 
@@ -516,6 +717,94 @@ function resolvePlan(plan, tests, publicHits, query) {
   return noSourceReply();
 }
 
+function scheduleIncludes(schedule, day) {
+  const value = String(schedule || "").replace(/\s+/g, "");
+  if (value.includes(day)) return true;
+  const order = ["월", "화", "수", "목", "금", "토", "일"];
+  const range = value.match(/([월화수목금토일])[~-]([월화수목금토일])/);
+  return range && order.indexOf(day) >= order.indexOf(range[1]) && order.indexOf(day) <= order.indexOf(range[2]);
+}
+
+function deterministicTestQuestion(query, rankedTests) {
+  const text = String(query || "");
+  const codes = codeCandidates(text);
+  const slots = requestedFieldSlots(text);
+  const comparesCodes = codes.length >= 2 && /(차이|비교|달라)/.test(text);
+  const explanation = /(무슨\s*검사|어떤\s*검사야|뭐(?:야|하는\s*검사)|무슨\s*의미|왜\s*검사)/.test(text);
+
+  if (comparesCodes) {
+    const items = uniqueTests(rankedTests.map(({ item }) => item));
+    return items.length >= 2 ? comparisonReply(items) : null;
+  }
+  if (codes.length === 1 && explanation && rankedTests.length === 1 && !slots.length) {
+    const item = rankedTests[0].item;
+    const significance = compactPublicText(fieldValue(item, "clinical_significance"), 320);
+    const description = significance
+      ? `${item.name} (검사코드 ${item.code})은 SCL 공개 자료에서 다음과 같이 설명합니다.\n${significance}`
+      : `${item.code}는 ${item.name} 검사입니다. SCL 공개 정보상 검체는 ${item.specimen}, 검사방법은 ${item.method}, 소요일은 ${item.tat}입니다. 구체적인 임상적 의미는 SCL 공개 페이지에 별도로 기재되어 있지 않습니다.`;
+    return testReply(item, description);
+  }
+  if (codes.length) return null;
+
+  let items = [];
+  let intro = "";
+  if (/갑상선/.test(text)) {
+    const wanted = new Set(CONCEPT_TEST_NAMES.thyroid);
+    items = catalog.filter((item) => wanted.has(canonicalTestName(item)));
+    intro = "아래 항목은 갑상선 기능을 확인할 때 함께 참고하는 검사입니다. TSH는 갑상선자극호르몬, T3·T4와 Free T3·Free T4는 갑상선호르몬 관련 항목입니다.";
+  } else if (/간\s*(?:기능|수치|검사)|간기능/.test(text)) {
+    const wanted = new Set(CONCEPT_TEST_NAMES.liver);
+    items = catalog.filter((item) => wanted.has(canonicalTestName(item)));
+    intro = "아래 항목은 간 상태를 확인할 때 함께 참고하는 검사입니다. ALT·AST 등은 검사 목적과 임상 상황에 따라 함께 확인할 수 있습니다.";
+  } else if (/hpv/i.test(text)) {
+    items = catalog.filter((item) => /hpv/i.test(item.name) || item.aliases?.some((alias) => /hpv/i.test(alias)));
+  } else if (/(?<![A-Za-z0-9])ALT(?![A-Za-z0-9])|에이엘티/i.test(text)) {
+    items = catalog.filter((item) => canonicalTestName(item).toUpperCase() === "ALT");
+    if (!/관련|특검/.test(text)) items = items.filter((item) => item.name === "ALT");
+  } else if (/소변|요검체|urine/i.test(text)) {
+    items = catalog.filter((item) => /urine|소변|요\b/i.test(item.specimen));
+  } else {
+    return null;
+  }
+
+  if (/serum|혈청|피\s*뽑/i.test(text)) items = items.filter((item) => /serum|혈청/i.test(item.specimen));
+  else if (/혈장|plasma/i.test(text)) items = items.filter((item) => /plasma|혈장/i.test(item.specimen));
+  else if (/전혈|whole\s*blood/i.test(text)) items = items.filter((item) => /whole\s*blood|전혈/i.test(item.specimen));
+  else if (/대변|분변|stool/i.test(text)) items = items.filter((item) => /stool|대변|분변/i.test(item.specimen));
+
+  const requestedDay = Object.entries({ 월요일: "월", 화요일: "화", 수요일: "수", 목요일: "목", 금요일: "금", 토요일: "토", 일요일: "일" })
+    .find(([label]) => text.includes(label))?.[1];
+  if (requestedDay) items = items.filter((item) => scheduleIncludes(item.schedule, requestedDay));
+  if (/(당일|하루\s*(?:안|이내)|1일\s*이내)/.test(text)) {
+    items = items.filter((item) => {
+      const days = turnaroundUpperDays(item.tat);
+      return days !== null && days <= 1;
+    });
+  }
+  const shortest = /(가장|제일).{0,6}(빠른|빨리|짧은)|(?:결과\s*)?(?:빨리|빠르게)\s*나오|소요일.{0,6}짧/.test(text);
+  if (shortest && items.length) {
+    const known = items.map((item) => ({ item, days: turnaroundUpperDays(item.tat) })).filter(({ days }) => days !== null);
+    if (known.length) {
+      const best = Math.min(...known.map(({ days }) => days));
+      items = known.filter(({ days }) => days === best).map(({ item }) => item);
+    }
+  }
+  items = uniqueTests(items);
+  if (!items.length) return noSourceReply();
+
+  const listRequest = /(찾아\s*줘|목록|후보|어떤\s*검사(?:가|들|를)?|검사\s*중|골라\s*줘|보여\s*줘|해당하는\s*검사)/.test(text)
+    || requestedDay || shortest || /(당일|하루\s*(?:안|이내)|1일\s*이내)/.test(text);
+  if (slots.length && !listRequest) return fieldAnswerReply(items, slots, text);
+  if (listRequest) {
+    const fields = slots.map(([field]) => field);
+    if (requestedDay && !fields.includes("schedule")) fields.push("schedule");
+    if (shortest && !fields.includes("tat")) fields.push("tat");
+    return listReply(items, intro, fields);
+  }
+  if (items.length === 1) return testReply(items[0]);
+  return listReply(items, intro);
+}
+
 function deterministicReply(query, lastTest, tests, publicHits) {
   if (RESULT_INTENT.test(query)) {
     return { domain: "result", reply: formReply("result_auth_form", "개인 검사결과는 보안 인증 후 조회할 수 있습니다. 인증정보는 AI에 전달하거나 저장하지 않습니다.") };
@@ -661,7 +950,16 @@ async function handleChat(request, env) {
   let responseId = null;
   let plan = null;
 
+  const deterministicTest = deterministicTestQuestion(inspection.modelInput, tests);
+  if (deterministicTest) {
+    reply = deterministicTest;
+    domain = "test";
+    mode = "deterministic";
+  }
+
   if (
+    !reply
+    &&
     env.GEMINI_API_KEY
     && !requestedCodes.length
     && !RESULT_INTENT.test(inspection.modelInput)

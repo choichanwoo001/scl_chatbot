@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 
 from .answer_coverage import apply_test_answer_coverage
@@ -98,6 +99,23 @@ class ChatOrchestrator:
         if fixed:
             self.sessions.append(state, inspection.model_input, fixed.text)
             return self._response(current_session_id, inspection, fixed, domain="safety")
+
+        deterministic = self._deterministic_reply(inspection.model_input)
+        if deterministic:
+            reply, domain, flags = deterministic
+            self.sessions.append(state, inspection.model_input, reply.text)
+            return self._response(
+                current_session_id,
+                inspection,
+                reply,
+                domain=domain,
+                requires_authentication=flags.get("requires_authentication", False),
+                needs_handoff=flags.get("needs_handoff", False),
+                medical_review_required=flags.get("medical_review_required", False),
+                sub_intent=flags.get("sub_intent"),
+                requested_action=flags.get("requested_action"),
+                safety_action=flags.get("safety_action"),
+            )
 
         if self.gateway:
             try:
@@ -234,6 +252,71 @@ class ChatOrchestrator:
             return Reply(
                 text="해당 표현에는 답변하기 어렵습니다. 검사명, 검사코드, 검체 또는 소요일을 입력해 주세요."
             )
+        return None
+
+    def _deterministic_reply(
+        self, query: str
+    ) -> tuple[Reply, str, dict[str, bool | str]] | None:
+        """Resolve high-confidence navigation and safety intents without model drift."""
+
+        if re.search(r"(?:검사)?결과.{0,12}(?:정상|이상|해석|판단)|수치.{0,12}(?:정상|해석)", query):
+            return (
+                Reply(
+                    kind="handoff_form",
+                    text=(
+                        "검사결과 수치의 정상 여부나 의학적 의미는 이 챗봇이 임의로 판단할 수 없습니다. "
+                        "검사기관의 참고범위와 개인 상태를 함께 봐야 하므로 담당 의료진 또는 상담 채널에 확인해 주세요."
+                    ),
+                    data_status="no_source",
+                ),
+                "result",
+                {
+                    "requires_authentication": True,
+                    "needs_handoff": True,
+                    "medical_review_required": True,
+                    "sub_intent": "interpret_personal_result",
+                    "requested_action": "explain",
+                    "safety_action": "handoff",
+                },
+            )
+
+        if re.search(r"검사\s*의뢰\s*(?:방법|어디)", query):
+            hits = self.public_search.search("의뢰방법", {"route"}, 3)
+            if hits:
+                return self.reply_builder.public_reply(hits), "support", {}
+
+        regions = [
+            "서울",
+            "경기",
+            "인천",
+            "대전",
+            "대구",
+            "부산",
+            "울산",
+            "광주",
+            "제주",
+            "강원",
+            "충북",
+            "충남",
+            "전북",
+            "전남",
+            "경북",
+            "경남",
+        ]
+        region = next((item for item in regions if item in query), None)
+        if region and re.search(r"(지점|센터|의원|주소|전화|연락처|가까운)", query):
+            hits = self.public_search.search(region, {"location"}, 5)
+            if hits:
+                return self.reply_builder.public_reply(hits), "support", {}
+
+        if re.search(r"최근.{0,12}신규\s*검사|신규\s*검사.{0,12}최근", query):
+            hits = self.public_search.recent_documents(
+                ["신규", "검사"],
+                document_type="official_notice",
+                limit=3,
+            )
+            if hits:
+                return self.reply_builder.public_reply(hits), "document", {}
         return None
 
     def _reply_from_plan(

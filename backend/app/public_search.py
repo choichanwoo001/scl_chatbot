@@ -21,6 +21,7 @@ from .models import (
     SiteRoute,
     TaxonomyTerm,
 )
+from .normalization import normalize_search_text
 from .schemas import TestInfo
 from .search_details import SearchDetails
 from .search_lexical import LexicalSearch
@@ -101,6 +102,55 @@ class PublicDataSearch(SearchRanking, SearchRows, LexicalSearch, SearchDetails):
         if not vector_hits or self.settings.vector_search_shadow_mode:
             return lexical_hits[:result_limit]
         return self._hybrid_rank(lexical_hits, vector_hits, result_limit)
+
+    def search_lexical(
+        self,
+        query: str,
+        types: Iterable[str] | None = None,
+        limit: int = 10,
+        *,
+        test_candidates: list[TestInfo] | tuple[TestInfo, ...] | None = None,
+    ) -> list[SearchHit]:
+        """Search the trusted local index without an external vector request."""
+
+        return self._search_lexical(
+            query,
+            types,
+            max(1, min(limit, 50)),
+            test_candidates=test_candidates,
+        )
+
+    def recent_documents(
+        self,
+        required_title_terms: Iterable[str],
+        *,
+        document_type: str | None = None,
+        limit: int = 3,
+    ) -> list[SearchHit]:
+        """Return locally indexed documents after filtering, then sorting by publication date."""
+
+        terms = [normalize_search_text(term) for term in required_title_terms if term.strip()]
+        rows = [
+            row
+            for row in self._document_search_rows()
+            if (document_type is None or row.document_type == document_type)
+            and all(term in row.normalized_title for term in terms)
+        ]
+        rows.sort(key=lambda row: row.updated_at.timestamp() if row.updated_at else 0.0, reverse=True)
+        return [
+            SearchHit(
+                ref=f"document:{row.document_id}",
+                entity_type="document",
+                entity_id=str(row.document_id),
+                title=row.title,
+                snippet=row.snippet,
+                source_url=row.source_url,
+                updated_at=self._date(row.updated_at),
+                score=100.0,
+                metadata={"document_type": row.document_type, "board_id": row.board_id},
+            )
+            for row in rows[: max(1, min(limit, 50))]
+        ]
 
     def _hybrid_rank(
         self,
