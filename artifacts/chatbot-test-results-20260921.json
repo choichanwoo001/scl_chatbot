@@ -1,0 +1,1574 @@
+[
+  {
+    "number": 1,
+    "question": "간 검사하려면 어떤 검사를 보면 돼?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 6건입니다.\n아래 항목은 간 상태를 확인할 때 함께 참고하는 검사입니다. ALT·AST 등은 검사 목적과 임상 상황에 따라 함께 확인할 수 있습니다.\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일\n\nAST (검사코드 10120)\n검체: Serum · 소요일: 1일\n\n(특검)AST (검사코드 10125)\n검체: Serum · 소요일: 1일\n\nBilirubin total (검사코드 10113)\n검체: Serum · 소요일: 1일\n\n(특검)Bilirubin,total (검사코드 10119)\n검체: Serum · 소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "AST",
+        "ref": "test:10120:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10120&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)AST",
+        "ref": "test:10125:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10125&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Bilirubin total",
+        "ref": "test:10113:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10113&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Bilirubin,total",
+        "ref": "test:10119:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10119&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.6,
+    "error": null
+  },
+  {
+    "number": 2,
+    "question": "피 뽑아서 하는 갑상선 검사 알려줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 7건입니다.\n아래 항목은 갑상선 기능을 확인할 때 함께 참고하는 검사입니다. TSH는 갑상선자극호르몬, T3·T4와 Free T3·Free T4는 갑상선호르몬 관련 항목입니다.\n\nTSH (검사코드 50040)\n검체: Serum · 소요일: 1일\n\n(특검)TSH (검사코드 50042)\n검체: Serum · 소요일: 1일\n\nFree T4 (검사코드 50070)\n검체: Serum · 소요일: 1일\n\n(특검)Free T4 (검사코드 50075)\n검체: Serum · 소요일: 1일\n\nFree T3 (검사코드 50080)\n검체: Serum · 소요일: 1일\n\nT3 (검사코드 50020)\n검체: Serum · 소요일: 1일\n\nT4 (검사코드 50030)\n검체: Serum · 소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "TSH",
+        "ref": "test:50040:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50040&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)TSH",
+        "ref": "test:50042:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50042&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Free T4",
+        "ref": "test:50070:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50070&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Free T4",
+        "ref": "test:50075:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50075&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Free T3",
+        "ref": "test:50080:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50080&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "T3",
+        "ref": "test:50020:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50020&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "T4",
+        "ref": "test:50030:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50030&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.3,
+    "error": null
+  },
+  {
+    "number": 3,
+    "question": "소변으로 하는 검사 중에 당일 나오는 거 있어?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 118건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 우선 20건을 표시합니다. 검사명이나 검체로 범위를 좁혀주세요.\n\nβ2-microglobulin (TIA) (검사코드 31522)\n검체: Urine,random · 소요일: 1일\n\nβ2-microglobulin(RU)_RIA (검사코드 S0325)\n검체: Urine,random · 소요일: 1일\n\n인공지능 기반 요로감염 위험도 (검사코드 40251)\n검체: Urine,random · 소요일: 1일\n\nCortisol,free (RU)-RIA (검사코드 50280)\n검체: Urine,random · 소요일: 1일\n\nCortisol,free(24h U)-RIA (검사코드 50280)\n검체: Urine,24hrs · 소요일: 1일\n\n(보)Zika virus Real-Time PCR(Urine) (검사코드 37070)\n검체: Urine,random · 소요일: 1일\n\n(특검)Microalbumin (RU) (검사코드 10028)\n검체: Urine,random · 소요일: 1일\n\n(특검)Microalbumin/Creatinine ratio-TIA (검사코드 63080)\n검체: Urine,random · 소요일: 1일\n\n(특검)Nicotine 대사산물(RU) (검사코드 19185)\n검체: Urine,random · 소요일: 1일\n\n(특검)P/C ratio (RU) (검사코드 63070)\n검체: Urine,random · 소요일: 1일\n\n(특검)Protein,total (RU) (검사코드 10018)\n검체: Urine,random · 소요일: 1일\n\nhCG (RU) (검사코드 40140)\n검체: Urine,random · 소요일: 1일\n\nMicroalbumin (RU) (검사코드 10020)\n검체: Urine,random · 소요일: 1일\n\nMicroalbumin (24h U) (검사코드 10020)\n검체: Urine,24hrs · 소요일: 1일\n\nAmphetamine (검사코드 13220)\n검체: Urine,random · 소요일: 1일\n\nAmylase (RU) (검사코드 10240)\n검체: Urine,random · 소요일: 1일\n\nBarbiturate (검사코드 13150)\n검체: Urine,random · 소요일: 1일\n\nBenzodiazepine (검사코드 12340)\n검체: Urine,random · 소요일: 1일\n\nBKV PCR 정성 (RU) (검사코드 38625)\n검체: Urine,random · 소요일: 1일\n\nBKV Real-time PCR 정량 (RU) (검사코드 31441)\n검체: Urine,random · 소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "β2-microglobulin (TIA)",
+        "ref": "test:31522:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=31522&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "β2-microglobulin(RU)_RIA",
+        "ref": "test:S0325:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=S0325&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "인공지능 기반 요로감염 위험도",
+        "ref": "test:40251:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=40251&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Cortisol,free (RU)-RIA",
+        "ref": "test:50280:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50280&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Cortisol,free(24h U)-RIA",
+        "ref": "test:50280:406",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50280&sampcode=406",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(보)Zika virus Real-Time PCR(Urine)",
+        "ref": "test:37070:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=37070&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Microalbumin (RU)",
+        "ref": "test:10028:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10028&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Microalbumin/Creatinine ratio-TIA",
+        "ref": "test:63080:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=63080&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Nicotine 대사산물(RU)",
+        "ref": "test:19185:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=19185&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)P/C ratio (RU)",
+        "ref": "test:63070:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=63070&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Protein,total (RU)",
+        "ref": "test:10018:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10018&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "hCG (RU)",
+        "ref": "test:40140:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=40140&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Microalbumin (RU)",
+        "ref": "test:10020:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10020&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Microalbumin (24h U)",
+        "ref": "test:10020:406",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10020&sampcode=406",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Amphetamine",
+        "ref": "test:13220:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=13220&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Amylase (RU)",
+        "ref": "test:10240:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10240&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Barbiturate",
+        "ref": "test:13150:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=13150&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Benzodiazepine",
+        "ref": "test:12340:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12340&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "BKV PCR 정성 (RU)",
+        "ref": "test:38625:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=38625&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "BKV Real-time PCR 정량 (RU)",
+        "ref": "test:31441:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=31441&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "partial",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.38,
+    "error": null
+  },
+  {
+    "number": 4,
+    "question": "HPV 검사할 때 어떤 통에 담아야 해?",
+    "setup": [],
+    "answer": "HPV 검사는 검사 방식과 검체에 따라 사용하는 용기가 다릅니다.\n- 자궁경부·질 면봉을 이용한 HPV PCR: 첨가제: PBS(Phosphate buffer solution) · 주요 항목: HPV, STD\n- 액상 HPV 검사: 첨가제: 세포보존제 · 주요 항목: 액상 자궁경부세포검사\n정확한 검사명이나 검사코드를 알려주시면 해당 용기만 확인해 드릴 수 있습니다.",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "HPV genotyping(Real-time PCR)",
+        "ref": "test:39313:515",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=39313&sampcode=515",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "액상 HPV genotyping(Real-time PCR)",
+        "ref": "test:39313:701",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=39313&sampcode=701",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.81,
+    "error": null
+  },
+  {
+    "number": 5,
+    "question": "이 검사 결과 나오려면 며칠 정도 걸려?",
+    "setup": [
+      {
+        "question": "10135 검사 찾아줘",
+        "answer": "조건에 해당하는 검사 1건입니다.\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일"
+      }
+    ],
+    "answer": "(특검)ALT (검사코드 10135)의 요청하신 정보입니다.\n- 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 7.35,
+    "error": null
+  },
+  {
+    "number": 6,
+    "question": "그중에서 제일 빨리 나오는 걸로 보여줘",
+    "setup": [
+      {
+        "question": "D185000HZ 보험코드에 해당하는 검사 알려줘",
+        "answer": "조건에 해당하는 검사 2건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n급여코드: D185000HZ\n\nALT (검사코드 10130)\n급여코드: D185000HZ"
+      }
+    ],
+    "answer": "공개 소요일 기준 가장 빠른 검사는 2건이며, 모두 1일로 공동 최단입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n소요일: 1일\n\nALT (검사코드 10130)\n소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 6.2,
+    "error": null
+  },
+  {
+    "number": 7,
+    "question": "아까 나온 것 중 두 번째 검사 자세히 보여줘",
+    "setup": [
+      {
+        "question": "D185000HZ 보험코드에 해당하는 검사 알려줘",
+        "answer": "조건에 해당하는 검사 2건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n급여코드: D185000HZ\n\nALT (검사코드 10130)\n급여코드: D185000HZ"
+      }
+    ],
+    "answer": "조건에 해당하는 검사 1건입니다. 공개 검사수가는 실제 본인부담금과 다를 수 있습니다.\n\nALT (검사코드 10130)\n급여코드: D185000HZ · 검체: Serum · 용기: 첨가제: 응고촉진제, gel · 주요 항목: 생화학, 혈청학적 검사 · 검사방법: Enzymatic method · 검사요일: 월~토 /야간 · 소요일: 1일 · 주의사항: <유의사항> ☞ 일반적으로 SGPT는 SGOT와 평행하게 상승되는데 myocardial infarction, chronic hepatitis, cirrhosis, chronic hepatitis, hepatic metastases 및 congestive change in liver때는 SGOT의 상승만은 못하다. 그러나 liver necrosis와 acute hepatitis때는 SGPT가 SGOT보다 더 높아진다. ☞ MI에서는 SGOT level이 4-10배가 올라가며 24시간에 peak에 달하고 3-4일 후에 정상화 된다. 보통 혈중 GOT level은 GPT level의 2/3 정도이다. Alcoholic hepatitis시에는 GOT상승이 GPT상승보다 많다. 따라서 GOT가 alcohol성 간질환을 의심한다. <관련검사> AST, ALP, ADA, 5'-nucleotidase, γ-GTP · 임상적 의의: <정의> AST, ALT는 세포질 분획(cytoplasmic: c)과 mitochondria 분획 (mitochondrial: m)에 국재하는 2종류의 isoenzyme이있다. 그리고 각각의 효소는 vitamin B6(pyridoxal phosphate)와 결합하는 holoenzyme과 vitamin B6과 결합하지 않는apoenzyme으로 나누는데 임상적으로 일상 측정되는 것은 holo type 이다. <임상적 의의> AST, ALT의 상대농도는 조직에 따라 다를 뿐만 아니라 같은 조직에서도 병적 상태에 따라 효소 활성 수준은 변동하는 것이다. 또한 혈중 반감기는 AST가 ALT보다 짧다. 그러므로 AST, ALT 활성치와 AST/ALT비의 시간적인 추이를 추적하여 진단 내지 예후를 해석할 수 있다. · 검체 보존방법: 동결or냉장 · 공개 검사수가: 1,930원",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 7.93,
+    "error": null
+  },
+  {
+    "number": 8,
+    "question": "간수치 검사 중 토요일에도 하는 검사가 뭐야?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 6건입니다.\n아래 항목은 간 상태를 확인할 때 함께 참고하는 검사입니다. ALT·AST 등은 검사 목적과 임상 상황에 따라 함께 확인할 수 있습니다.\n\nALT (검사코드 10130)\n검사요일: 월~토 /야간\n\n(특검)ALT (검사코드 10135)\n검사요일: 월~토 /주간\n\nAST (검사코드 10120)\n검사요일: 월~토 /야간\n\n(특검)AST (검사코드 10125)\n검사요일: 월~토 /주간\n\nBilirubin total (검사코드 10113)\n검사요일: 월~토 /야간\n\n(특검)Bilirubin,total (검사코드 10119)\n검사요일: 월~토 /야간",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "AST",
+        "ref": "test:10120:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10120&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)AST",
+        "ref": "test:10125:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10125&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Bilirubin total",
+        "ref": "test:10113:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10113&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Bilirubin,total",
+        "ref": "test:10119:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10119&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.22,
+    "error": null
+  },
+  {
+    "number": 9,
+    "question": "10135 검사 찾아줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 1건입니다.\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.26,
+    "error": null
+  },
+  {
+    "number": 10,
+    "question": "D185000HZ 보험코드에 해당하는 검사 알려줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 2건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n급여코드: D185000HZ\n\nALT (검사코드 10130)\n급여코드: D185000HZ",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.99,
+    "error": null
+  },
+  {
+    "number": 11,
+    "question": "D185000HZ로 검색했는데 두 개가 나오면 각각 어디서 확인해?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 2건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.38,
+    "error": null
+  },
+  {
+    "number": 12,
+    "question": "ALT Serum 검사 찾아줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 1건입니다.\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.28,
+    "error": null
+  },
+  {
+    "number": 13,
+    "question": "검사코드 10135인 ALT 항목 열어줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 1건입니다.\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.32,
+    "error": null
+  },
+  {
+    "number": 14,
+    "question": "R0329가 무슨 검사야?",
+    "setup": [],
+    "answer": "α1-Antitrypsin (검사코드 R0329)의 요청하신 정보입니다.\n- 임상적 의의: SCL 공개 페이지에 별도 기재되지 않음",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "α1-Antitrypsin",
+        "ref": "test:R0329:616",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=R0329&sampcode=616",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "partial",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.8,
+    "error": null
+  },
+  {
+    "number": 15,
+    "question": "X999999ZZ라는 코드가 있어?",
+    "setup": [],
+    "answer": "지정한 코드·조건에 해당하는 검사를 현재 공개 데이터에서 찾지 못했습니다.",
+    "kind": "text",
+    "citations": [],
+    "answerability": "none",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.14,
+    "error": null
+  },
+  {
+    "number": 16,
+    "question": "에이엘티 검사 알려줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 1건입니다.\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 5.39,
+    "error": null
+  },
+  {
+    "number": 17,
+    "question": "ALT검사 소요기간하고 검채 알려줘",
+    "setup": [],
+    "answer": "ALT (검사코드 10130)의 요청하신 정보입니다.\n- 소요일: 1일\n- 검체: Serum",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.92,
+    "error": null
+  },
+  {
+    "number": 18,
+    "question": "간 기능 보는 피검사 뭐였지?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 6건입니다.\n아래 항목은 간 상태를 확인할 때 함께 참고하는 검사입니다. ALT·AST 등은 검사 목적과 임상 상황에 따라 함께 확인할 수 있습니다.\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일\n\n(특검)ALT (검사코드 10135)\n검체: Serum · 소요일: 1일\n\nAST (검사코드 10120)\n검체: Serum · 소요일: 1일\n\n(특검)AST (검사코드 10125)\n검체: Serum · 소요일: 1일\n\nBilirubin total (검사코드 10113)\n검체: Serum · 소요일: 1일\n\n(특검)Bilirubin,total (검사코드 10119)\n검체: Serum · 소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "AST",
+        "ref": "test:10120:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10120&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)AST",
+        "ref": "test:10125:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10125&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Bilirubin total",
+        "ref": "test:10113:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10113&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Bilirubin,total",
+        "ref": "test:10119:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10119&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.09,
+    "error": null
+  },
+  {
+    "number": 19,
+    "question": "결과 빨리 나오는 갑상선 관련 검사",
+    "setup": [],
+    "answer": "공개 소요일 기준 가장 빠른 검사는 7건이며, 모두 1일로 공동 최단입니다.\n아래 항목은 갑상선 기능을 확인할 때 함께 참고하는 검사입니다. TSH는 갑상선자극호르몬, T3·T4와 Free T3·Free T4는 갑상선호르몬 관련 항목입니다.\n\nTSH (검사코드 50040)\n소요일: 1일\n\n(특검)TSH (검사코드 50042)\n소요일: 1일\n\nFree T4 (검사코드 50070)\n소요일: 1일\n\n(특검)Free T4 (검사코드 50075)\n소요일: 1일\n\nFree T3 (검사코드 50080)\n소요일: 1일\n\nT3 (검사코드 50020)\n소요일: 1일\n\nT4 (검사코드 50030)\n소요일: 1일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "TSH",
+        "ref": "test:50040:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50040&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)TSH",
+        "ref": "test:50042:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50042&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Free T4",
+        "ref": "test:50070:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50070&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)Free T4",
+        "ref": "test:50075:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50075&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Free T3",
+        "ref": "test:50080:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50080&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "T3",
+        "ref": "test:50020:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50020&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "T4",
+        "ref": "test:50030:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50030&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.85,
+    "error": null
+  },
+  {
+    "number": 20,
+    "question": "혈액 말고 소변으로 할 수 있는 검사는?",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 286건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 우선 20건을 표시합니다. 검사명이나 검체로 범위를 좁혀주세요.\n\nα1-microglobulin (RU) (검사코드 11380)\n검체: Urine,random · 소요일: 30일\n\nβ2-microglobulin (TIA) (검사코드 31522)\n검체: Urine,random · 소요일: 1일\n\nβ2-microglobulin(RU)_RIA (검사코드 S0325)\n검체: Urine,random · 소요일: 1일\n\n내분비 교란물질 프로파일 (검사코드 16300)\n검체: Urine,random · 소요일: 5일\n\n내분비 교란물질 프로파일_종합형 (검사코드 16303)\n검체: Urine,random · 소요일: 5일\n\n마약 확진 프로파일 (확진6종) (검사코드 P1311)\n검체: Urine,random · 소요일: 2일\n\n액상체액세포검사(RU) (검사코드 61361)\n검체: Urine,random · 소요일: 3일\n\n인공지능 기반 요로감염 위험도 (검사코드 40251)\n검체: Urine,random · 소요일: 1일\n\n코티닌 (검사코드 16301)\n검체: Urine,random · 소요일: 5일\n\nCortisol,free (RU)-RIA (검사코드 50280)\n검체: Urine,random · 소요일: 1일\n\nCortisol,free(24h U)-RIA (검사코드 50280)\n검체: Urine,24hrs · 소요일: 1일\n\n할로겐화물 프로파일 (RU) (검사코드 40799)\n검체: Urine,random · 소요일: 2일\n\n(보)Zika virus Real-Time PCR(Urine) (검사코드 37070)\n검체: Urine,random · 소요일: 1일\n\n(특검)바나듐(V) (RU) (검사코드 12590)\n검체: Urine,random · 소요일: 2일\n\n(특검)비소 분획검사(RU) (검사코드 12124)\n검체: Urine,random · 소요일: 2일\n\n(특검)삼염화에탄올(TCE) (검사코드 12005)\n검체: Urine,random · 소요일: 3일\n\n(특검)삼염화초산(TCA) (검사코드 12000)\n검체: Urine,random · 소요일: 3일\n\n(특검)삼염화초산(TCA)_ 1,1,1 TCE (검사코드 12007)\n검체: Urine,random · 소요일: 3일\n\n(특검)삼염화초산(TCA)_PCE (검사코드 12008)\n검체: Urine,random · 소요일: 3일\n\n(특검)삼염화초산(TCA)_TCE (검사코드 12006)\n검체: Urine,random · 소요일: 3일",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "α1-microglobulin (RU)",
+        "ref": "test:11380:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=11380&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "β2-microglobulin (TIA)",
+        "ref": "test:31522:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=31522&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "β2-microglobulin(RU)_RIA",
+        "ref": "test:S0325:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=S0325&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "내분비 교란물질 프로파일",
+        "ref": "test:16300:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=16300&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "내분비 교란물질 프로파일_종합형",
+        "ref": "test:16303:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=16303&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "마약 확진 프로파일 (확진6종)",
+        "ref": "test:P1311:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=P1311&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "액상체액세포검사(RU)",
+        "ref": "test:61361:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=61361&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "인공지능 기반 요로감염 위험도",
+        "ref": "test:40251:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=40251&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "코티닌",
+        "ref": "test:16301:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=16301&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Cortisol,free (RU)-RIA",
+        "ref": "test:50280:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50280&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "Cortisol,free(24h U)-RIA",
+        "ref": "test:50280:406",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=50280&sampcode=406",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "할로겐화물 프로파일 (RU)",
+        "ref": "test:40799:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=40799&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(보)Zika virus Real-Time PCR(Urine)",
+        "ref": "test:37070:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=37070&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)바나듐(V) (RU)",
+        "ref": "test:12590:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12590&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)비소 분획검사(RU)",
+        "ref": "test:12124:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12124&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)삼염화에탄올(TCE)",
+        "ref": "test:12005:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12005&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)삼염화초산(TCA)",
+        "ref": "test:12000:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12000&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)삼염화초산(TCA)_ 1,1,1 TCE",
+        "ref": "test:12007:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12007&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)삼염화초산(TCA)_PCE",
+        "ref": "test:12008:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12008&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "(특검)삼염화초산(TCA)_TCE",
+        "ref": "test:12006:400",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=12006&sampcode=400",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "partial",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.81,
+    "error": null
+  },
+  {
+    "number": 21,
+    "question": "HPV 검사의 검체, 용기, 검사방법, 소요일을 한 번에 알려줘",
+    "setup": [],
+    "answer": "조회된 검사들의 검체·용기·검사방법·소요일 정보를 공통 값별로 정리했습니다.\n- Vaginal/Cervical Swab 검체: 검체: Vaginal/Cervical Swab · 용기: 첨가제: PBS(Phosphate buffer solution) · 주요 항목: HPV, STD · 검사방법: Real-time PCR · 소요일: 1일\n- Vaginal/Cervical Swab 검체: 검체: Vaginal/Cervical Swab · 용기: 첨가제: PBS(Phosphate buffer solution) · 주요 항목: HPV, STD · 검사방법: PCR · 소요일: 1일\n- Cervix cell 검체: 검체: Cervix cell · 용기: 첨가제: 세포보존제 · 주요 항목: 액상 자궁경부세포검사 · 검사방법: Real-time PCR · 소요일: 1일\n- Cervix cell 검체: 검체: Cervix cell · 용기: 첨가제: 세포보존제 · 주요 항목: 액상 자궁경부세포검사 · 검사방법: PCR · 소요일: 1일\n정확한 검사명이나 검사코드를 알려주시면 해당 정보만 확인해 드릴 수 있습니다.",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "HPV genotyping(Real-time PCR)",
+        "ref": "test:39313:515",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=39313&sampcode=515",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "HPV screening PCR",
+        "ref": "test:38940:515",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=38940&sampcode=515",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "액상 HPV genotyping(Real-time PCR)",
+        "ref": "test:39313:701",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=39313&sampcode=701",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "액상 HPV screening PCR",
+        "ref": "test:38940:701",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=38940&sampcode=701",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.87,
+    "error": null
+  },
+  {
+    "number": 22,
+    "question": "ALT 검사는 무슨 요일에 하고 결과는 언제 나와?",
+    "setup": [],
+    "answer": "ALT (검사코드 10130)의 요청하신 정보입니다.\n- 검사요일: 월~토 /야간\n- 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.89,
+    "error": null
+  },
+  {
+    "number": 23,
+    "question": "갑상선 검사 후보별로 검사코드와 검체를 같이 보여줘",
+    "setup": [],
+    "answer": "다음 조건은 현재 자동 검색으로 확인하기 어렵습니다: 후보별로 검사코드와 검체를 같이 보여줘",
+    "kind": "text",
+    "citations": [],
+    "answerability": "none",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.8,
+    "error": null
+  },
+  {
+    "number": 24,
+    "question": "Serum으로 검사하고 하루 안에 나오는 ALT 관련 항목 찾아줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 1건입니다.\n\nALT (검사코드 10130)\n검체: Serum · 소요일: 1일",
+    "kind": "test",
+    "citations": [
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.48,
+    "error": null
+  },
+  {
+    "number": 25,
+    "question": "10130이랑 10135는 뭐가 달라?",
+    "setup": [],
+    "answer": "두 검사의 핵심 차이입니다.\n\n## 차이점\n- 검사요일: (특검)ALT(10135) 월~토 /주간 · ALT(10130) 월~토 /야간\n- 주의사항: (특검)ALT(10135) 공개 데이터에 없음 · ALT(10130) 상세 안내 있음\n- 검체 보존방법: (특검)ALT(10135) 냉장 · ALT(10130) 동결or냉장\n\n## 공통점\n- 급여코드: D185000HZ · 검체: Serum · 검사방법: Enzymatic method · 소요일: 1일 · 공개 검사수가: 1,930원",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.18,
+    "error": null
+  },
+  {
+    "number": 26,
+    "question": "검체용기 종류를 확인할 수 있는 페이지로 보내줘",
+    "setup": [],
+    "answer": "‘검체용기’ 메뉴로 이동하면 됩니다. /front/contents/contents_tub.do",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "검체용기",
+        "ref": "route:4",
+        "url": "https://www.scllab.co.kr/front/contents/contents_tub.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "support",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 5.57,
+    "error": null
+  },
+  {
+    "number": 27,
+    "question": "검사 의뢰 방법이 어디에 나와 있어?",
+    "setup": [],
+    "answer": "‘의뢰방법’ 메뉴로 이동하면 됩니다. /front/check/howto_request.do",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "의뢰방법",
+        "ref": "route:2",
+        "url": "https://www.scllab.co.kr/front/check/howto_request.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "support",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 1.66,
+    "error": null
+  },
+  {
+    "number": 28,
+    "question": "최근 신규검사 안내 공문 찾아줘",
+    "setup": [],
+    "answer": "관련 공개 문서를 찾았습니다. ‘[SCL 2026-068호]LSD (Lysergic acid diethylamide) 확진 신규 검사 및 일부 검사정보 변경 안내’에서 세부 내용을 확인해 주세요.",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "[SCL 2026-068호]LSD (Lysergic acid diethylamide) 확진 신규 검사 및 일부 검사정보 변경 안내",
+        "ref": "document:1",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=6271",
+        "updated_at": "2026-08-18",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "[SCL 2024-088호] 인공지능 기반 요로감염 위험도 신규 검사 및 일부 검사정보 변경 안내",
+        "ref": "document:70",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=5696",
+        "updated_at": "2024-09-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "[SCL 2024-074호] Antibiotic susceptibility_다제내성균 신규 검사 및 일부 검사정보 변경 안내",
+        "ref": "document:76",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=5662",
+        "updated_at": "2024-08-07",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "document",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 4.09,
+    "error": null
+  },
+  {
+    "number": 29,
+    "question": "2026년 8월 연휴 검사일정 안내문 찾아줘",
+    "setup": [],
+    "answer": "관련 공개 문서를 찾았습니다. ‘[공지]2026년 8월 연휴(광복절,대체휴일)에 따른 검사일정 변경 안내’에서 세부 내용을 확인해 주세요.",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "[공지]2026년 8월 연휴(광복절,대체휴일)에 따른 검사일정 변경 안내",
+        "ref": "document:2",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=6255",
+        "updated_at": "2026-08-06",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "document",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 18.08,
+    "error": null
+  },
+  {
+    "number": 30,
+    "question": "HPV 관련 공문이나 검사 안내서가 있어?",
+    "setup": [],
+    "answer": "관련 공개 문서를 찾았습니다. ‘HPV genotyping 검사’에서 세부 내용을 확인해 주세요.",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "HPV genotyping 검사",
+        "ref": "document:958",
+        "url": "https://www.scllab.co.kr/front/contents/contents_doc.do?pageIndex=3",
+        "updated_at": "2020-04-15",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "[SCL 2023-076호] HPV genotyping(LBMA) 검사 및 일부 검사정보 변경 안내",
+        "ref": "document:111",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=5474",
+        "updated_at": "2023-10-27",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "2008_38,HPV Genotyping고,저위험군내용,protein s free수가...",
+        "ref": "document:749",
+        "url": "https://www.scllab.co.kr/front/viewAritcle.do?bbsId=BBS_0004&nttId=654",
+        "updated_at": "2008-06-10",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "document",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 44.0,
+    "error": null
+  },
+  {
+    "number": 31,
+    "question": "대구 SCL 지점 주소와 전화번호 알려줘",
+    "setup": [],
+    "answer": "대구남부: 대구광역시 동구 화랑로 95, 2F (효목동) · 053-751-7924",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "대구남부",
+        "ref": "location:6",
+        "url": "https://www.scllab.co.kr/front/about/network_list.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "대구서부",
+        "ref": "location:7",
+        "url": "https://www.scllab.co.kr/front/about/network_list.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "대구의원",
+        "ref": "location:64",
+        "url": "https://www.scllab.co.kr/front/about/center1.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "support",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 2.32,
+    "error": null
+  },
+  {
+    "number": 32,
+    "question": "제주에서 가장 가까운 SCL 센터 연락처 알려줘",
+    "setup": [],
+    "answer": "제주: 제주특별자치도 제주시 신성로6길 29-4, 1F(도남동) · 064-753-5727",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "제주",
+        "ref": "location:58",
+        "url": "https://www.scllab.co.kr/front/about/network_list.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      },
+      {
+        "title": "제주의원",
+        "ref": "location:65",
+        "url": "https://www.scllab.co.kr/front/about/center2.do",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": [
+          "verified-public-record"
+        ]
+      }
+    ],
+    "answerability": "full",
+    "domain": "support",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 1.57,
+    "error": null
+  },
+  {
+    "number": 33,
+    "question": "검사결과는 어디에서 확인해?",
+    "setup": [],
+    "answer": "개인 검사결과는 보안 인증 후 조회할 수 있습니다. 인증정보는 AI에 전달하거나 저장하지 않습니다.",
+    "kind": "result_auth_form",
+    "citations": [],
+    "answerability": "none",
+    "domain": "result",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 5.61,
+    "error": null
+  },
+  {
+    "number": 34,
+    "question": "검사결과 수치가 정상인지 해석해줘",
+    "setup": [],
+    "answer": "검사결과 수치의 정상 여부나 의학적 의미는 이 챗봇이 임의로 판단할 수 없습니다. 검사기관의 참고범위와 개인 상태를 함께 봐야 하므로 담당 의료진 또는 상담 채널에 확인해 주세요.",
+    "kind": "handoff_form",
+    "citations": [],
+    "answerability": "none",
+    "domain": "result",
+    "safety_action": "handoff",
+    "needs_handoff": true,
+    "duration_seconds": 1.12,
+    "error": null
+  },
+  {
+    "number": 37,
+    "question": "D185000HZ 보험코드 검사 찾아줘",
+    "setup": [],
+    "answer": "조건에 해당하는 검사 2건입니다.\n아래 링크는 질문 조건에 맞는 SCL 검사 상세 페이지입니다. 모두 검체가 Serum인 검사입니다.\n\n(특검)ALT (검사코드 10135)\n급여코드: D185000HZ\n\nALT (검사코드 10130)\n급여코드: D185000HZ",
+    "kind": "text",
+    "citations": [
+      {
+        "title": "(특검)ALT",
+        "ref": "test:10135:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10135&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      },
+      {
+        "title": "ALT",
+        "ref": "test:10130:100",
+        "url": "https://www.scllab.co.kr/front/check/check_item_detail.do?itemcode=10130&sampcode=100",
+        "updated_at": "2026-08-20",
+        "source_tier": "internal_scl",
+        "retrieved_at": null,
+        "claim_ids": []
+      }
+    ],
+    "answerability": "full",
+    "domain": "test",
+    "safety_action": "allow",
+    "needs_handoff": false,
+    "duration_seconds": 3.37,
+    "error": null
+  }
+]
