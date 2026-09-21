@@ -525,14 +525,16 @@ function fieldAnswerReply(items, slots, query) {
 
 function listReply(items, intro, fields = []) {
   const shown = uniqueTests(items).slice(0, items.length > 10 ? 8 : 20);
+  const displayedFields = fields.length ? fields : ["specimen", "tat"];
   const lines = [`조건에 해당하는 검사 ${items.length}건입니다.`];
   if (intro) lines.push(intro);
   for (const item of shown) {
     lines.push("", `${item.name} (검사코드 ${item.code})`);
-    for (const field of fields) {
+    const details = displayedFields.map((field) => {
       const value = fieldValue(item, field);
-      lines.push(`${FIELD_LABELS[field]}: ${value || missingFieldText(field)}`);
-    }
+      return `${FIELD_LABELS[field]}: ${value || missingFieldText(field)}`;
+    });
+    lines.push(details.join(" · "));
   }
   if (items.length > shown.length) lines.push("", `결과가 많아 대표 ${shown.length}건만 표시했습니다.`);
   return textReply(lines.join("\n"), shown);
@@ -756,11 +758,23 @@ function deterministicTestQuestion(query, rankedTests) {
   let intro = "";
   if (/갑상선/.test(text)) {
     const wanted = new Set(CONCEPT_TEST_NAMES.thyroid);
-    items = catalog.filter((item) => wanted.has(canonicalTestName(item)));
+    const order = new Map(CONCEPT_TEST_NAMES.thyroid.map((name, index) => [name, index]));
+    items = catalog
+      .filter((item) => wanted.has(canonicalTestName(item)))
+      .sort((left, right) => (
+        order.get(canonicalTestName(left)) - order.get(canonicalTestName(right))
+        || Number(left.name.startsWith("(")) - Number(right.name.startsWith("("))
+      ));
     intro = "아래 항목은 갑상선 기능을 확인할 때 함께 참고하는 검사입니다. TSH는 갑상선자극호르몬, T3·T4와 Free T3·Free T4는 갑상선호르몬 관련 항목입니다.";
   } else if (/간\s*(?:기능|수치|검사)|간기능/.test(text)) {
     const wanted = new Set(CONCEPT_TEST_NAMES.liver);
-    items = catalog.filter((item) => wanted.has(canonicalTestName(item)));
+    const order = new Map(CONCEPT_TEST_NAMES.liver.map((name, index) => [name, index]));
+    items = catalog
+      .filter((item) => wanted.has(canonicalTestName(item)))
+      .sort((left, right) => (
+        order.get(canonicalTestName(left)) - order.get(canonicalTestName(right))
+        || Number(left.name.startsWith("(")) - Number(right.name.startsWith("("))
+      ));
     intro = "아래 항목은 간 상태를 확인할 때 함께 참고하는 검사입니다. ALT·AST 등은 검사 목적과 임상 상황에 따라 함께 확인할 수 있습니다.";
   } else if (/hpv/i.test(text)) {
     items = catalog.filter((item) => /hpv/i.test(item.name) || item.aliases?.some((alias) => /hpv/i.test(alias)));

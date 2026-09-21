@@ -300,6 +300,18 @@ test("lists thyroid candidates with exactly the requested specimen field", async
   assert.doesNotMatch(body.reply.text, /소요일:/);
 });
 
+test("matches the local linked-list contract for a natural blood-draw thyroid question", async () => {
+  const body = await askStandalone("피 뽑아서 하는 갑상선 검사 알려줘");
+
+  assert.equal(body.mode, "deterministic");
+  assert.equal(body.reply.kind, "text");
+  assert.match(body.reply.text, /TSH \(검사코드 50040\)\n검체: Serum · 소요일: 1일/);
+  assert.match(body.reply.text, /\(특검\)TSH \(검사코드 50042\)\n검체: Serum · 소요일: 1일/);
+  assert.ok(body.reply.text.indexOf("TSH (검사코드 50040)") < body.reply.text.indexOf("(특검)TSH (검사코드 50042)"));
+  assert.ok(body.reply.text.indexOf("Free T4 (검사코드 50070)") < body.reply.text.indexOf("(특검)Free T4 (검사코드 50075)"));
+  assert.equal(body.reply.citations.length, 7);
+});
+
 test("filters liver-related tests by Saturday schedule", async () => {
   const body = await askStandalone("간수치 검사 중 토요일에도 하는 검사가 뭐야?");
 
