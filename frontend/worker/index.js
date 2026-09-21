@@ -157,6 +157,12 @@ function turnaroundUpperDays(value) {
 }
 
 function contextualCandidateReply(query, items, previousFilter) {
+  if (/(?:두\s*(?:개|검사)|둘|2\s*개).{0,12}(?:차이|비교|다른)|(?:차이|비교).{0,12}(?:두\s*(?:개|검사)|둘|2\s*개)/i.test(query)) {
+    const compared = uniqueTests(items).slice(0, 2);
+    if (compared.length === 2) {
+      return { reply: comparisonReply(compared), filter: previousFilter };
+    }
+  }
   const ordinalMatch = String(query).match(/(?:^|\s)(첫|두|세|네|1|2|3|4)\s*번째/);
   if (ordinalMatch) {
     const indexes = { 첫: 0, 두: 1, 세: 2, 네: 3, 1: 0, 2: 1, 3: 2, 4: 3 };

@@ -347,6 +347,21 @@ test("a candidate button containing an exact test code bypasses follow-up filter
   assert.equal(selectedBody.sub_intent, null);
 });
 
+test("compares the two remembered billing-code candidates in a natural follow-up", async () => {
+  const sessionId = "billing-code-comparison-session";
+  const first = await askStandalone("D185000HZ 해당하는 검사", sessionId);
+  assert.equal(first.reply.kind, "choices");
+  assert.equal(first.reply.choices.length, 2);
+
+  const compared = await askStandalone("두개의 차이점은?", sessionId);
+  assert.equal(compared.mode, "deterministic");
+  assert.equal(compared.reply.kind, "text");
+  assert.match(compared.reply.text, /두 검사의 핵심 차이/);
+  assert.match(compared.reply.text, /\(특검\)ALT\(10135\)/);
+  assert.match(compared.reply.text, /ALT\(10130\)/);
+  assert.doesNotMatch(compared.reply.text, /PDGF/);
+});
+
 test("filters remembered code candidates by field and carries the term into a short follow-up", async () => {
   const sessionId = "field-followup-session";
   const first = await worker.fetch(new Request("https://example.test/api/chat", {
